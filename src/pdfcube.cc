@@ -1960,7 +1960,7 @@ main(int argc, char *argv[])
   if(vm.count("transitions")) {
     vector<int> tr = vm["transitions"].as<std::vector<int> >();
     for (std::vector<int>::iterator ii = tr.begin(); ii != tr.end(); ++ii) {
-      if(*ii > pc->pages()) 
+      if(*ii > pc->pages() || *ii < 1) 
         {
           cerr << "Transision after end of file." << endl;
         }
