@@ -1,0 +1,111 @@
+.TH "\fBpdfcube\fR"  "1" "11/2008" "pdfcube 0.0.3" "pdfcube presentation viewer"
+.SH "NAME"
+\fBpdfcube\fP - a PDF presentations viewer with some eye-candy in 3D.
+.SH "SYNOPSIS"
+.HP 24
+\fBpdfcube\fP \fIFILE\fP [\fB--help\fP] [\fB--bgcolor\fP \fIf,f,f\fP] [\fB--top-color\fP \fIf,f,f\fP] [\fB--no-fullscreen\fP] [\fB--transitions\fP \fIn\fP \fIn\fP \fIn\fP \.\.\.] 
+.SH "DESCRIPTION"
+.PP
+\fBpdfcube\fP(1) is a tiny (about 30KiB) viewer for Portable Document
+Format (PDF) files that adds spinning cube transition effect to your
+PDF presentation files (like Compiz or Mac ones). It can also zoom on
+5 predefined areas with a smooth zooming effect. This program is
+suited only for landscape PDF files, mostly presentations done with
+LaTeX (Beamer, Prosper, etc.) or OpenOffice.org Impress.
+.PP
+\fBpdfcube\fP(1) is an open source, low-effort, spare-time, money-less
+project. Your help is welcome!
+.SH "OPTIONS"
+.TP
+\fB\-h\fR [ \fB\-\-help\fR ]
+This help message.
+.TP
+\fB\-v\fR [ \fB\-\-version\fR ]
+Version information
+.TP
+\fB\-b\fR [ \fB\-\-bgcolor\fR ] arg
+Background color is 'r,g,b' with real values between
+0.0 and 1.0, no spaces.
+.TP
+\fB\-t\fR [ \fB\-\-top\-color\fR ] arg
+Cube top color in 'r,g,b' format again with reals in
+[0,1].
+.TP
+\fB\-c\fR [ \fB\-\-transitions\fR ] arg Pages at wich to do a cube transition by default eg.
+2 4 7
+Must be the last option on the command line.
+.TP
+\fB\-i\fR [ \fB\-\-input\-file\fR ] arg
+PDF file to show.
+.TP
+\fB\-n\fR [ \fB\-\-no\-fullscreen\fR ]
+Don't activate full\-screen mode by default.
+.PP
+.SS Notes
+The "-i" option can be omitted, the first non-option string is treated
+as the input file. Since the "-c" option accepts an undetermined
+number of parameters it should be, if present, the last option on the
+command line.
+.SH "INTERACTIVE CONTROL"
+.TP
+\fBc, a\fP
+Will display the next/previous page with a cube transition effect.
+.TP
+\fBSPACE, PG-DOWN\fP
+Will switch to the next page with the programmed ("-c" option) effect.
+.TP
+\fBh, j, k, l, z\fP
+Will zoom into the predefined areas.
+.TP
+\fBg\fP
+Will undo any zoom.
+.TP
+\fBESC, Ctrl-q\fP
+Will exit pdfcube immediately.
+.TP
+\fBPG-UP, Left-Arrow\fP
+Will quick-switch to the previous page.
+.TP
+\fBRight-Arrow\fP
+Will quick-switch to the next page.
+.TP
+\fBf\fP
+Will switch full\-screen mode.
+.TP
+\fBCtrl-l\fP
+Will redraw the screen.
+.TP
+\fBCtrl-1, Ctrl-2, ..., Ctrl-9\fP
+Will jump to the page corresponding to the n-th programmed transition (if any).
+.TP
+\fB1, 2, ..., 9\fP
+Will jump to page 5*(n-1).
+.SH "EXAMPLES"
+.TP
+\fBpdfcube\fP foo.pdf
+Will display 'foo.pdf' in full-screen.
+.TP
+\fBpdfcube\fP foo.pdf \fB--bgcolor\fP 0,0,0 \fB--top-color\fP 0.6,0.2,0.2 \fB--transitions\fP 1 5 7
+Will display 'foo.pdf' with custom background and cube color, it
+will also prepare three transistions for 1-2 5-6 and 7-8 page turns.
+.SH "BUGS"
+\fBpdfcube\fP(1) can view only PDF files with a 4:3 aspect ratio. This
+is a known "feature": the program is oriented to view presentations on
+a projected screen.
+.PP
+See http://code.100allora.it/pdfcube/report/ for the bugtracker of
+\fBpdfcube\fP(1) (you should obtain an account first). Or please report any bug
+to the author.
+.SH "AUTHORS"
+Written by Mirko Maischberger, <mailto:mirko.maischberger@gmail.com>
+and Karol Sokolowsky <sokoow@gmail.com>
+.SH "RESOURCES"
+Main web site: http://code.100allora.it/pdfcube/
+.SH "THANKS"
+I'd like to thank the LILiK laboratory in Florence, Italy for having
+teached me the value of open-source and open-culture.
+.SH "COPYING"
+This manpage is available under the same GPL v2 or later license as
+the main program, the original manpage was written by Alexander Wirt
+<mailto:formorer@debian.org> for the Debian distribution. The 0.0.3
+version is Copyright (C) 2008 Mirko Maischberger.
