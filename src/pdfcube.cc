@@ -22,6 +22,8 @@
 //
 // Notes: please indent using 2 spaces.
 
+// #define NDEBUG
+
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
@@ -1954,16 +1956,21 @@ main(int argc, char *argv[])
   pc = new pdfcube(document);
 
   page_transition = new bool[pc->pages()];
+  std::fill(&page_transition[0], &page_transition[pc->pages()], false);
   if(vm.count("transitions")) {
     vector<int> tr = vm["transitions"].as<std::vector<int> >();
-    for(int ii = 0; ii < pc->pages(); ii++) {
-      page_transition[ii] = false;
-    }
     for (std::vector<int>::iterator ii = tr.begin(); ii != tr.end(); ++ii) {
       if(*ii > pc->pages()) 
-        cerr << "Transision after end of file." << endl;
+        {
+          cerr << "Transision after end of file." << endl;
+        }
       else
-        page_transition[*ii-1] = true;
+        {
+          page_transition[*ii-1] = true;
+#ifndef NDEBUG
+          cerr << "Transision at: " << (*ii-1) << endl;
+#endif
+        }
     }
   }
 
