@@ -22,7 +22,7 @@
 //
 // Notes: please indent using 2 spaces.
 
-// #define NDEBUG
+#define NDEBUG
 
 #include <iostream>
 #include <cstdio>
