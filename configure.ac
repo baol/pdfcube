@@ -9,7 +9,7 @@ dnl -----------------------------------------------
 dnl Package name and version number (user defined)
 dnl -----------------------------------------------
 
-AM_INIT_AUTOMAKE(pdfcube, 0.0.3)
+AM_INIT_AUTOMAKE(pdfcube, 0.0.4)
 
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -32,7 +32,7 @@ PKG_CHECK_MODULES(glib, glib-2.0 >= 2.0.0)
 AC_SUBST(glib_CFLAGS)
 AC_SUBST(glib_LIBS)
 
-PKG_CHECK_MODULES(gtk, gtk+-2.0 >= 2.0.0)
+PKG_CHECK_MODULES(gtk, gtk+-2.0 >= 2.4.0)
 AC_SUBST(gtk_CFLAGS)
 AC_SUBST(gtk_LIBS)
 

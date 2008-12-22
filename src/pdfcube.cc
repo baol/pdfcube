@@ -1,6 +1,6 @@
 // ex: set ts=2: -*- mode: C++; mode: flyspell-prog; mode: flymake; c-basic-offset: 2; indent-tabs-mode: nil -*- 
 //
-// PDF-Cube source file - pdfcube.cc
+// PDFCube source file - pdfcube.cc
 // 
 // Copyright (C) 2006-2008 
 //               Mirko Maischberger <mirko.maischberger@gmail.com>
@@ -56,7 +56,7 @@ namespace po = boost::program_options;
 
 #define DEFAULT_WIDTH 640
 #define DEFAULT_HEIGHT 480
-#define DEFAULT_TITLE  "PDF-Cube"
+#define DEFAULT_TITLE  "PDFCube"
 #define N_FRAMES 30
 #define TIMEOUT_INTERVAL 38
 
@@ -1844,6 +1844,17 @@ int
 main(int argc, char *argv[])
 {
 
+  GtkWidget *
+    window;
+  GdkGLConfig *
+    glconfig;
+
+  /* Initialize GTK. */
+  gtk_init(&argc, &argv);
+
+  /* Initialize GtkGLExt. */
+  gtk_gl_init(&argc, &argv);
+
   po::options_description opts("Available options");
 
   opts.add_options()
@@ -1872,7 +1883,7 @@ main(int argc, char *argv[])
   string input_file;
 
   if(vm.count("help")) {
-    cout << endl << "PDFCube 0.0.3" << endl;
+    cout << endl << "pdfcube 0.0.4" << endl;
     cout << "=============" << endl;
     cout << "Copyright (C) 2006-2008 Mirko Maischberger <mirko.maischberger@gmail.com>" << endl;
     cout << "                   2008 Karol Sokolowski   <sokoow@gmail.com>" <<  endl << endl;
@@ -1886,15 +1897,28 @@ main(int argc, char *argv[])
   }
   
   if(vm.count("version")) {
-    cout << "pdfcube 0.0.3" << endl;
+    cout << "pdfcube 0.0.4" << endl;
     return 0;
   }
 
   if (vm.count("input-file")) {
     input_file = vm["input-file"].as<std::string>();
   } else {
-    cerr << "You must specify an input PDF file on the command line." << endl;
-    exit(1);
+    GtkWidget* filesel;
+    filesel = gtk_file_chooser_dialog_new("Choose a PDF presentation...",
+                                          NULL,
+                                          GTK_FILE_CHOOSER_ACTION_OPEN,
+                                          GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                          GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+                                          NULL);
+    if (gtk_dialog_run(GTK_DIALOG(filesel)) == GTK_RESPONSE_ACCEPT)
+      {
+        char *filename;
+        filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filesel));
+        input_file = filename;
+        g_free(filename);
+      }
+    gtk_widget_destroy(filesel);
   }
 
   if(vm.count("bgcolor")) {
@@ -1922,17 +1946,6 @@ main(int argc, char *argv[])
       }
     std::copy(&tc[0], &tc[3], &top_color[0]);
   }
-
-  GtkWidget *
-    window;
-  GdkGLConfig *
-    glconfig;
-
-  /* Initialize GTK. */
-  gtk_init(&argc, &argv);
-
-  /* Initialize GtkGLExt. */
-  gtk_gl_init(&argc, &argv);
 
   /* Configure OpenGL framebuffer. */
   glconfig = configure_gl();
