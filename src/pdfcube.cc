@@ -29,6 +29,8 @@
 #include <cstdlib>
 #include <cmath>
 #include <sstream>
+
+// Removing GTK+ dependencies to ease portability.
 // Gtk+ (pkg-config gtk+-2.0)
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -1863,9 +1865,9 @@ main(int argc, char *argv[])
     ("version,v",
      "Version information")
     ("bgcolor,b", po::value<std::string>(),
-     "Background color is 'r,g,b' with real values between 0.0 and 1.0, no spaces.")
+     "Background color is 'r:g:b' with real values between 0.0 and 1.0, no spaces.")
     ("top-color,t", po::value<std::string>(),
-     "Cube top color in 'r,g,b' format again with reals in [0,1].")
+     "Cube top color in 'r:g:b' format again with reals in [0,1].")
     ("transitions,c", po::value<std::vector<int> >()->multitoken(), 
      "Pages at wich to do a cube transition by default eg. 2 4 7\nMust be the last option on the command line.")
     ("input-file,i", po::value<std::string>(), "PDF file to show.")
@@ -1891,7 +1893,9 @@ main(int argc, char *argv[])
     cout << endl;
     cout << "Usage examples:" << endl;
     cout << "  $ pdfcube presentation.pdf" << endl;
-    cout << "  $ pdfcube presentation.pdf --bgcolor 0,0,0 --top-color 0.6,0.2,0.2 --transitions 1 5 7"
+    cout << "  $ pdfcube presentation.pdf --bgcolor 0:0:0 --top-color 0.6:0.2:0.2 --transitions 1 5 7"
+         << endl 
+         << "  (floating point numbers are locale aware on some C libraries)"
          << endl << endl << endl;
     return 0;
   }
@@ -1925,7 +1929,7 @@ main(int argc, char *argv[])
     vector<double> cc; 
     string v;
     std::istringstream iss(vm["bgcolor"].as<std::string>());
-    while(getline(iss, v, ',')) cc.push_back(::atof(v.c_str())); 
+    while(getline(iss, v, ':')) cc.push_back(::atof(v.c_str())); 
     if(cc.size() != 3)
       {
         cerr << "You should specify 3 values for background-color." << endl;
@@ -1938,7 +1942,7 @@ main(int argc, char *argv[])
     vector<double> tc; 
     string v;
     std::istringstream iss(vm["top-color"].as<std::string>());
-    while(getline(iss, v, ',')) tc.push_back(::atof(v.c_str())); 
+    while(getline(iss, v, ':')) tc.push_back(::atof(v.c_str())); 
     if(tc.size() != 3)
       {
         cerr << "You should specify 3 values for top-color." << endl;

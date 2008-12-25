@@ -19,7 +19,7 @@ dnl -----------------------------------------------
 
 AC_PROG_CC
 AC_PROG_CXX
-AM_PROG_LIBTOOL
+dnl AM_PROG_LIBTOOL
 AM_SANITY_CHECK
 
 dnl -----------------------------------------------
@@ -40,7 +40,7 @@ PKG_CHECK_MODULES(gtkglext, gtkglext-1.0 >= 1.0.0)
 AC_SUBST(gtkglext_CFLAGS)
 AC_SUBST(gtkglext_LIBS)
 
-PKG_CHECK_MODULES(poppler, poppler >= 0.4.5)
+PKG_CHECK_MODULES(poppler, poppler >= 0.5.4)
 AC_SUBST(poppler_CFLAGS)
 AC_SUBST(poppler_LIBS)
 
