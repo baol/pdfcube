@@ -60,7 +60,7 @@ namespace po = boost::program_options;
 #define DEFAULT_HEIGHT 480
 #define DEFAULT_TITLE  "PDFCube"
 #define N_FRAMES 30
-#define TIMEOUT_INTERVAL 38
+#define TIMEOUT_INTERVAL 25
 
 //////////////////////////////////////////////////////////////////////////
 // Globals (will be moved inside classes some day)
@@ -98,7 +98,7 @@ static GtkWidget *create_window(GdkGLConfig * glconfig);
 
 static GLfloat clear_color[4] = { 0.6, 0.0, 0.0, 0.0 };
 static GLfloat top_color[4] = { 0.7, 0.6, 0.6, 0.0 };
-static double animation_emphasis = 3.0;
+static double animation_emphasis = 2.4;
 
 static bool
 sleeping()
@@ -1038,7 +1038,7 @@ protected:
     double w, h;
     poppler_page_get_size(page, &w, &h);
     poppler_page_render_to_pixbuf(page, 0, 0, iWidth, iHeight,
-                                  1.0 * iWidth / w, 0, pm);
+                                  ((double)iWidth)/w, 0, pm);
   }
 
   void buildLists()
@@ -1540,7 +1540,7 @@ key_press_event(GtkWidget * widget, GdkEventKey * event, gpointer data)
 #ifndef NDEBUG
         g_print("Advance key\n");
 #endif
-        if (page_transition[pc->page()]and sleeping())
+        if (page_transition[(pc->page()+1)%pc->pages()] and sleeping())
           start_animation(widget, CUBE_NEXT);
         else if (sleeping())
           start_animation(widget, SWITCH_FW);
@@ -1868,8 +1868,6 @@ main(int argc, char *argv[])
      "Background color is 'r:g:b' with real values between 0.0 and 1.0, no spaces.")
     ("top-color,t", po::value<std::string>(),
      "Cube top color in 'r:g:b' format again with reals in [0,1].")
-    ("transitions,c", po::value<std::vector<int> >()->multitoken(), 
-     "Pages at wich to do a cube transition by default eg. 2 4 7\nMust be the last option on the command line.")
     ("input-file,i", po::value<std::string>(), "PDF file to show.")
     ("no-fullscreen,n", 
      "Don't activate full-screen mode by default.");
@@ -1892,11 +1890,21 @@ main(int argc, char *argv[])
     cout << opts << endl;
     cout << endl;
     cout << "Usage examples:" << endl;
+    cout << "  $ pdfcube" << endl;
     cout << "  $ pdfcube presentation.pdf" << endl;
-    cout << "  $ pdfcube presentation.pdf --bgcolor 0:0:0 --top-color 0.6:0.2:0.2 --transitions 1 5 7"
-         << endl 
-         << "  (floating point numbers are locale aware on some C libraries)"
-         << endl << endl << endl;
+    cout << 
+      "  $ pdfcube presentation.pdf --bgcolor 0:0:0 --top-color 0.6:0.2:0.2" <<
+      endl << endl <<
+      "  The \"Box\" transition present in PDF files is rendered as a 3D cube." 
+         <<
+      endl <<
+      "  (e.g in beamer you can use the \\transboxin command)" <<
+      endl << endl <<
+      "  If no file is given on the command line a file open dialog is shown." 
+         <<
+      endl << endl <<
+      "  NB: floating point numbers are locale aware on some C libraries." <<
+      endl << endl << endl;
     return 0;
   }
   
@@ -1966,31 +1974,42 @@ main(int argc, char *argv[])
     document = poppler_document_new_from_file(filename_uri, NULL, NULL);
 
   if (document == NULL) {
-    perror("Invaild PDF file.");
+    cerr << "Invaild PDF file." << endl;
     exit(1);
   }
 
   pc = new pdfcube(document);
 
+  // Read transitions form PDF file
   page_transition = new bool[pc->pages()];
-  std::fill(&page_transition[0], &page_transition[pc->pages()], false);
-  if(vm.count("transitions")) {
-    vector<int> tr = vm["transitions"].as<std::vector<int> >();
-    for (std::vector<int>::iterator ii = tr.begin(); ii != tr.end(); ++ii) {
-      if(*ii > pc->pages() || *ii < 1) 
+  for(int ii(0); ii != pc->pages(); ++ii)
+    {
+      PopplerPage* page = 
+        poppler_document_get_page(document, ii);
+      PopplerPageTransition* transition = 
+        poppler_page_get_transition(page);
+      if(!transition) 
         {
-          cerr << "Transision after end of file." << endl;
+          page_transition[ii] = false;
         }
       else
         {
-          page_transition[*ii-1] = true;
-#ifndef NDEBUG
-          cerr << "Transision at: " << (*ii-1) << endl;
-#endif
+          switch(transition->type)
+            {
+            case POPPLER_PAGE_TRANSITION_REPLACE:
+              page_transition[ii] = false;
+              break;
+            case POPPLER_PAGE_TRANSITION_BOX:
+              page_transition[ii] = true;
+              break;
+            default:
+              cerr << "Unsuported transition type (" << transition->type 
+                   << ") at page " << (ii+1) << endl;
+              break;
+            }
         }
     }
-  }
-
+  
   /* Create and show the application window. */
   window = create_window(glconfig);
   

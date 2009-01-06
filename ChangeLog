@@ -1,3 +1,9 @@
+2009-01-06  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc: Removed --transition switch in favor of reading
+	transitions from the PDF file. Added a dialog to open files when
+	no file is given on the command line (this is so the first "GUI"
+	version of PDFCube)
+	
 2008-11-23  Mirko Maischberger  <mirko.maischberger@gmail.com>
 	* man/: moved pdfcube.1 manpage inside man folder.
 	
