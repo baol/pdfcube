@@ -1913,26 +1913,6 @@ main(int argc, char *argv[])
     return 0;
   }
 
-  if (vm.count("input-file")) {
-    input_file = vm["input-file"].as<std::string>();
-  } else {
-    GtkWidget* filesel;
-    filesel = gtk_file_chooser_dialog_new("Choose a PDF presentation...",
-                                          NULL,
-                                          GTK_FILE_CHOOSER_ACTION_OPEN,
-                                          GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-                                          GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
-                                          NULL);
-    if (gtk_dialog_run(GTK_DIALOG(filesel)) == GTK_RESPONSE_ACCEPT)
-      {
-        char *filename;
-        filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filesel));
-        input_file = filename;
-        g_free(filename);
-      }
-    gtk_widget_destroy(filesel);
-  }
-
   if(vm.count("bgcolor")) {
     vector<double> cc; 
     string v;
@@ -1957,6 +1937,28 @@ main(int argc, char *argv[])
         exit(1);
       }
     std::copy(&tc[0], &tc[3], &top_color[0]);
+  }
+
+  if (vm.count("input-file")) {
+    input_file = vm["input-file"].as<std::string>();
+  } else {
+    GtkWidget* filesel;
+    filesel = gtk_file_chooser_dialog_new("Choose a PDF presentation...",
+                                          NULL,
+                                          GTK_FILE_CHOOSER_ACTION_OPEN,
+                                          GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+                                          GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+                                          NULL);
+    if (gtk_dialog_run(GTK_DIALOG(filesel)) == GTK_RESPONSE_ACCEPT)
+      {
+        char *filename;
+        filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(filesel));
+        input_file = filename;
+        g_free(filename);
+      }
+    else
+      return 0;
+    gtk_widget_destroy(filesel);
   }
 
   /* Configure OpenGL framebuffer. */
