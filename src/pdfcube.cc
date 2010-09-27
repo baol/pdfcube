@@ -669,7 +669,7 @@ public:
 #endif
         forward(widget);
         current_face = next_face();
-        //          quick_reset(widget);
+        quick_reset(widget);
         break;
       case CUBE_PREV:
 #ifndef NDEBUG
@@ -677,7 +677,7 @@ public:
 #endif
         backward(widget);
         current_face = prev_face();
-        //          quick_reset(widget);
+        quick_reset(widget);
         break;
       case SWITCH_FW:
 #ifndef NDEBUG
@@ -685,6 +685,7 @@ public:
 #endif
         forward(widget);
         current_face = next_face();
+        quick_reset(widget);
         break;
       case SWITCH_BW:
 #ifndef NDEBUG
@@ -692,6 +693,7 @@ public:
 #endif
         backward(widget);
         current_face = prev_face();
+        quick_reset(widget);
         break;
       case ZOOM0:
       case ZOOM1:
@@ -736,18 +738,12 @@ public:
 
   // Prev face of the cube in [0..3]
   int prev_face() {
-    if (current_face - 1 < 0)
-      return 3;
-    else
-      return current_face - 1;
+    return (current_face+3) % 4;
   }
 
   // Next face of the cube in [0..3]
   int next_face() {
-    if (current_face + 1 > 3)
-      return 0;
-    else
-      return current_face + 1;
+    return (current_face+1) % 4;
   }
 
   // Prev document page
@@ -910,6 +906,7 @@ public:
   // Reset status without updating textures
   void
   quick_reset(GtkWidget * widget) {
+    // update_textures(widget);
     animating = FALSE;
     frame = 0;
     lookposx = 0.0;
@@ -921,7 +918,7 @@ public:
     persp = 44.0;
     angle = 0.0;
     current_face = 0;
-    active_animation = ANIM_NONE;
+    // active_animation = ANIM_NONE;
     previous_animation = ANIM_NONE;
     last_animation = ANIM_NONE;
   }
@@ -1972,11 +1969,13 @@ main(int argc, char *argv[])
   if (NULL == filename_uri) {
     cerr << "File name error." << endl;
   }
+  clog << "Opening: " << filename_uri << endl;
+  GError *error = NULL;
   PopplerDocument *
-    document = poppler_document_new_from_file(filename_uri, NULL, NULL);
+    document = poppler_document_new_from_file(filename_uri, NULL, &error);
 
   if (document == NULL) {
-    cerr << "Invaild PDF file." << endl;
+    cerr << "Invaild PDF file." << error->message << endl;
     exit(1);
   }
 
