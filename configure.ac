@@ -19,7 +19,6 @@ dnl -----------------------------------------------
 
 AC_PROG_CC
 AC_PROG_CXX
-dnl AM_PROG_LIBTOOL
 AM_SANITY_CHECK
 
 dnl -----------------------------------------------
@@ -44,10 +43,13 @@ PKG_CHECK_MODULES(poppler_glib, poppler-glib >= 0.4.5)
 AC_SUBST(poppler_glib_CFLAGS)
 AC_SUBST(poppler_glib_LIBS)
 
+PKG_CHECK_MODULES(cairo, cairo >= 0.25)
+AC_SUBST(cairo_CFLAGS)
+AC_SUBST(cairo_LIBS)
+
 AC_CHECK_HEADERS(GL/gl.h)
 AC_CHECK_HEADERS(GL/glu.h)
 AC_CHECK_HEADERS(GL/glx.h)
-AC_CHECK_HEADERS(GL/glut.h)
 
 AX_BOOST_BASE([1.33.1])
 AX_BOOST_PROGRAM_OPTIONS()

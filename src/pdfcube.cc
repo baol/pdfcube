@@ -2,7 +2,7 @@
 //
 // PDFCube source file - pdfcube.cc
 // 
-// Copyright (C) 2006-2008 
+// Copyright (C) 2006-2011
 //               Mirko Maischberger <mirko.maischberger@gmail.com>
 //               Karol Sokolowski   <sokoow@gmail.com>
 //
@@ -43,8 +43,9 @@
 #include <GL/glu.h>
 #include <GL/glx.h>
 
-// PDF to GdkPixbuf (pkg-config poppler-glib)
+// PDF to cairo_surface_t using Cairo (pkg-config poppler-glib cairo)
 #include <poppler.h>
+#include <cairo.h>
 
 #include <boost/program_options.hpp>
 
@@ -123,14 +124,25 @@ public:
      total_pages(poppler_document_get_n_pages(d)),
      frame(0),
      lookposx(0.0), lookposy(0.0), lookposz(3.48),
-     atx(0.0), aty(0.0), atz(0.0), persp(44.0), angle(0.0), pixmap(0) {
+     atx(0.0), aty(0.0), atz(0.0), persp(44.0), angle(0.0), 
+     context(0), pixmap(0) {
     texmap[0] = 0;
     texmap[1] = 1;
     texmap[2] = 2;
     cube_faces=0;
+    PopplerPage *page;
+    double w,h;
+    page = poppler_document_get_page(d, 1);
+    poppler_page_get_size(page, &w, &h);
+    tex_width = 1024;
+    tex_height = 768;
     pixmap =
-      gdk_pixbuf_new(GDK_COLORSPACE_RGB, true, 8, tex_width,
-                     tex_height);
+      cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 
+                                 tex_width,
+                                 tex_height);
+    context = cairo_create(pixmap);
+    cairo_scale(context, tex_width/w, (double)tex_height/h);
+
     steps = new GLfloat[N_FRAMES];
     xsteps = new double[N_FRAMES];
     zsteps = new double[N_FRAMES];
@@ -229,8 +241,8 @@ public:
     glShadeModel(GL_SMOOTH);
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
 
-    GLfloat mat_ambient[] = { 0.0, 0.0, 0.0, 1.00 };
-    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.00 };
+    GLfloat mat_ambient[] = { 0.0, 0.0, 0.0, 0.00 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.00 };
     GLfloat mat_shininess[] = { 3.0 };
 
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
@@ -324,7 +336,6 @@ public:
   // Redraw scene
   void
   redraw(GtkWidget * widget) {
-
     double yoffset = 0.1;
     if (animating) {
       switch (active_animation) {
@@ -725,7 +736,7 @@ public:
       GLuint rcube[] = {
         0, 0, 0, 127
       };
-      glDrawPixels(1, 1, GL_RGBA, GL_UNSIGNED_BYTE, rcube);
+      glDrawPixels(1, 1, GL_BGRA, GL_UNSIGNED_BYTE, rcube);
 
       active_animation = ANIM_NONE;
 
@@ -936,14 +947,14 @@ public:
       texmap[2] = texmap[1];
       texmap[1] = texmap[0];
       texmap[0] = tmp;
-      render_page(pixmap, next_page(), tex_width, tex_height);
+      render_page(next_page());
     } else {
       current_page = prev_page();
       int tmp = texmap[0];
       texmap[0] = texmap[1];
       texmap[1] = texmap[2];
       texmap[2] = tmp;
-      render_page(pixmap, prev_page(), tex_width, tex_height);
+      render_page(prev_page());
     }
 
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB,
@@ -954,8 +965,8 @@ public:
                  tex_width,
                  tex_height,
                  0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(pixmap));
+                 GL_BGRA,
+                 GL_UNSIGNED_BYTE, cairo_image_surface_get_data(pixmap));
 
     gdk_window_invalidate_rect(widget->window, &widget->allocation,
                                FALSE);
@@ -967,7 +978,7 @@ public:
 
     assert(current_page >= 0);
     assert(current_page < total_pages);
-    render_page(pixmap, current_page, tex_width, tex_height);
+    render_page(current_page);
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB, textures[texmap[0]]);
     glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
                  0,
@@ -975,10 +986,10 @@ public:
                  tex_width,
                  tex_height,
                  0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(pixmap));
+                 GL_BGRA,
+                 GL_UNSIGNED_BYTE, cairo_image_surface_get_data(pixmap));
 
-    render_page(pixmap, prev_page(), tex_width, tex_height);
+    render_page(prev_page());
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB, textures[texmap[1]]);
     glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
                  0,
@@ -986,10 +997,10 @@ public:
                  tex_width,
                  tex_height,
                  0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(pixmap));
+                 GL_BGRA,
+                 GL_UNSIGNED_BYTE, cairo_image_surface_get_data(pixmap));
 
-    render_page(pixmap, next_page(), tex_width, tex_height);
+    render_page(next_page());
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB, textures[texmap[2]]);
     glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
                  0,
@@ -997,8 +1008,8 @@ public:
                  tex_width,
                  tex_height,
                  0,
-                 GL_RGBA,
-                 GL_UNSIGNED_BYTE, gdk_pixbuf_get_pixels(pixmap));
+                 GL_BGRA,
+                 GL_UNSIGNED_BYTE, cairo_image_surface_get_data(pixmap));
 
     gdk_window_invalidate_rect(widget->window, &widget->allocation,
                                FALSE);
@@ -1014,7 +1025,8 @@ protected:
   double lookposx, lookposy, lookposz;
   double atx, aty, atz;
   double persp, angle;
-  GdkPixbuf *pixmap;
+  cairo_surface_t *pixmap;
+  cairo_t *context;
   int texmap[3];
 
   // OpenGL Textures
@@ -1024,18 +1036,22 @@ protected:
   // Width and Height of the rendered pixmap (aspect
   // ratio is fixed, should instead depend on the 
   // aspect ratio of the pdf page)
-  static const gint tex_width = (gint) (3 * 1024 / 2);
-  static const gint tex_height = (gint) (3 * 768 / 2);
+  gint tex_width; //(gint) (3 * 1024 / 2);
+  gint tex_height; //(gint) (3 * 768 / 2);
 
   // renders the poppler page on a pixmap
   void
-  render_page(GdkPixbuf * pm, int i, gint iWidth, gint iHeight) {
+  render_page(int i) {
     PopplerPage *page;
     page = poppler_document_get_page(doc, i);
-    double w, h;
-    poppler_page_get_size(page, &w, &h);
-    poppler_page_render_to_pixbuf(page, 0, 0, iWidth, iHeight,
-                                  ((double)iWidth)/w, 0, pm);
+    //double w,h;
+    //poppler_page_get_size(page, &w, &h);
+    cairo_save(context);
+    unsigned char* data = cairo_image_surface_get_data(pixmap);
+    std::fill(data, data+4*tex_width*tex_height, 0);
+    cairo_surface_mark_dirty(pixmap);
+    poppler_page_render(page, context);
+    cairo_restore(context);
   }
 
   void buildLists()

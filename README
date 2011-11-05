@@ -44,7 +44,6 @@ ENABLE_FOG if you like, the default is to have it off.
  * Poppler (>=0.5.4 recommended) (Debian/Ubuntu package:
    libpoppler-dev libpoppler-glib-dev)
  * GtkGlExt (Debian/Ubuntu package: libgtkglext1-dev)
- * OpenGL (freeglut3-dev)
  * Boost C++ Program Option Library
 
 == Contact information ==
