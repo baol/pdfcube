@@ -38,7 +38,7 @@
 // GtkGLExt (pkg-config gtkglext-1.0)
 #include <gtk/gtkgl.h>
 
-// OpenGL (-lglut)
+// OpenGL
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glx.h>
@@ -138,10 +138,10 @@ public:
     tex_height = 768;
     pixmap =
       cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 
-                                 tex_width,
-                                 tex_height);
+                                 (double)tex_width,
+                                 (double)tex_height);
     context = cairo_create(pixmap);
-    cairo_scale(context, tex_width/w, (double)tex_height/h);
+    cairo_scale(context, ((double)tex_width)/w, ((double)tex_height)/h);
 
     steps = new GLfloat[N_FRAMES];
     xsteps = new double[N_FRAMES];
@@ -235,15 +235,15 @@ public:
   // OpenGL initialization
   void
   initialize(GtkWidget * widget) {
-    GLfloat position[] = { 1.0, 1.0, 0.0, 1.0 };
+    GLfloat position[] = { 1.0, 0.0, 0.0, 1.0 };
     GLfloat local_view[] = { 0.0 };
 
     glShadeModel(GL_SMOOTH);
     glEnable(GL_TEXTURE_RECTANGLE_ARB);
 
-    GLfloat mat_ambient[] = { 0.0, 0.0, 0.0, 0.00 };
-    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.00 };
-    GLfloat mat_shininess[] = { 3.0 };
+    GLfloat mat_ambient[] = { 1.0, 1.0, 1.0, 0.00 };
+    // GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.00 };
+    // GLfloat mat_shininess[] = { 0.2 };
 
     glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
     // glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -251,24 +251,26 @@ public:
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
-    glEnable(GL_BLEND);
+    // glEnable(GL_BLEND);
     glEnable(GL_CULL_FACE);
-    glEnable(GL_POLYGON_SMOOTH);
-    glPolygonMode(GL_FRONT, GL_FILL);
-    glEdgeFlag(GL_FALSE);
+    // glEnable(GL_POLYGON_SMOOTH);
+    // glPolygonMode(GL_FRONT, GL_FILL);
+    // glEdgeFlag(GL_FALSE);
     
-    glClearColor(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+    glClearColor(clear_color[0], clear_color[1], clear_color[2], 
+                 clear_color[3]);
     glCullFace(GL_FRONT);
-    glDisable(GL_DEPTH_TEST);
+    // glDisable(GL_DEPTH_TEST);
 
-//    glEnable(GL_DEPTH_TEST);
-//    glDepthFunc(GL_LEQUAL);
+    // glEnable(GL_DEPTH_TEST);
+    // glDepthFunc(GL_LEQUAL);
     glLightfv(GL_LIGHT0, GL_POSITION, position);
-    glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, local_view);
+    glLightfv(GL_LIGHT0, GL_COLOR, mat_ambient);
+    // glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, local_view);
 
-    glFrontFace(GL_CCW);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
+    // glFrontFace(GL_CCW);
+    // glEnable(GL_LIGHTING);
+    // glEnable(GL_LIGHT0);
     glEnable(GL_AUTO_NORMAL);
     glEnable(GL_NORMALIZE);
 
@@ -721,7 +723,6 @@ public:
       }
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      //      glClear(GL_COLOR_BUFFER_BIT);
       glMatrixMode(GL_PROJECTION);
       glLoadIdentity();
       gluPerspective(persp, 1.0, 0.5, 10.0);
@@ -1043,13 +1044,13 @@ protected:
   void
   render_page(int i) {
     PopplerPage *page;
+    double w, h;
     page = poppler_document_get_page(doc, i);
-    //double w,h;
-    //poppler_page_get_size(page, &w, &h);
+    poppler_page_get_size(page, &w, &h);
     cairo_save(context);
-    unsigned char* data = cairo_image_surface_get_data(pixmap);
-    std::fill(data, data+4*tex_width*tex_height, 0);
-    cairo_surface_mark_dirty(pixmap);
+    cairo_rectangle(context, 0.0, 0.0, w, h);
+    cairo_set_source_rgb(context, 1.0, 1.0, 1.0);
+    cairo_fill(context);
     poppler_page_render(page, context);
     cairo_restore(context);
   }
@@ -1799,11 +1800,10 @@ configure_gl(void)
 
   /* Try double-buffered visual */
   glconfig = gdk_gl_config_new_by_mode((GdkGLConfigMode)
-                                       (GDK_GL_MODE_RGBA |
-                                        GDK_GL_MODE_ALPHA |
-                                        GDK_GL_MODE_RGB |
+                                       (GDK_GL_MODE_RGB |
                                         GDK_GL_MODE_DEPTH |
-                                        GDK_GL_MODE_DOUBLE));
+                                        GDK_GL_MODE_DOUBLE
+                                        ));
   if (glconfig == NULL) {
     g_print("\n*** Cannot find the double-buffered visual.\n");
     g_print("\n*** Trying single-buffered visual.\n");
@@ -1898,7 +1898,7 @@ main(int argc, char *argv[])
   if(vm.count("help")) {
     cout << endl << "pdfcube 0.0.4" << endl;
     cout << "=============" << endl;
-    cout << "Copyright (C) 2006-2008 Mirko Maischberger <mirko.maischberger@gmail.com>" << endl;
+    cout << "Copyright (C) 2006-2011 Mirko Maischberger <mirko.maischberger@gmail.com>" << endl;
     cout << "                   2008 Karol Sokolowski   <sokoow@gmail.com>" <<  endl << endl;
     cout << opts << endl;
     cout << endl;
@@ -2017,10 +2017,12 @@ main(int argc, char *argv[])
               page_transition[ii] = false;
               break;
             case POPPLER_PAGE_TRANSITION_BOX:
+              cerr << "Supported transition type (" << transition->type 
+                   << ") at page " << (ii+1) << endl;
               page_transition[ii] = true;
               break;
             default:
-              cerr << "Unsuported transition type (" << transition->type 
+              cerr << "Unsupported transition type (" << transition->type 
                    << ") at page " << (ii+1) << endl;
               break;
             }
