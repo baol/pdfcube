@@ -3,10 +3,9 @@ dnl Initialization macros.
 dnl --------------------------------
 
 AC_INIT(src/pdfcube.cc)
-dnl AM_CONFIG_HEADER(config.h)
 
 dnl -----------------------------------------------
-dnl Package name and version number (user defined)
+dnl Package name and version number
 dnl -----------------------------------------------
 
 AM_INIT_AUTOMAKE(pdfcube, 0.0.4)
