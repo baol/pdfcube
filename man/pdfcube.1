@@ -1,17 +1,17 @@
-.TH "\fBpdfcube\fR"  "1" "11/2008" "pdfcube 0.0.3" "pdfcube presentation viewer"
+.TH "\fBpdfcube\fR"  "1" "11/2011" "pdfcube 0.0.4" "pdfcube presentation viewer"
 .SH "NAME"
-\fBpdfcube\fP - a PDF presentations viewer with some eye-candy in 3D.
+\fBpdfcube\fP - a PDF presentation viewer with 3D effects.
 .SH "SYNOPSIS"
 .HP 24
-\fBpdfcube\fP \fIFILE\fP [\fB--help\fP] [\fB--bgcolor\fP \fIf,f,f\fP] [\fB--top-color\fP \fIf,f,f\fP] [\fB--no-fullscreen\fP] [\fB--transitions\fP \fIn\fP \fIn\fP \fIn\fP \.\.\.] 
+\fBpdfcube\fP \fIFILE\fP [\fB--help\fP] [\fB--bgcolor\fP \fIf:f:f\fP] [\fB--top-color\fP \fIf:f:f\fP] [\fB--no-fullscreen\fP]  
 .SH "DESCRIPTION"
 .PP
 \fBpdfcube\fP(1) is a tiny (about 30KiB) viewer for Portable Document
 Format (PDF) files that adds spinning cube transition effect to your
-PDF presentation files (like Compiz or Mac ones). It can also zoom on
-5 predefined areas with a smooth zooming effect. This program is
-suited only for landscape PDF files, mostly presentations done with
-LaTeX (Beamer, Prosper, etc.) or OpenOffice.org Impress.
+PDF presentation files. It can also zoom on 5 predefined areas with a
+smooth zooming effect. This program is suited only for landscape PDF
+files, mostly presentations done with LaTeX (Beamer, Prosper, etc.) or
+OpenOffice.org Impress.
 .PP
 \fBpdfcube\fP(1) is an open source, low-effort, spare-time, money-less
 project. Your help is welcome!
@@ -24,16 +24,17 @@ This help message.
 Version information
 .TP
 \fB\-b\fR [ \fB\-\-bgcolor\fR ] arg
-Background color is 'r,g,b' with real values between
+Background color is 'r:g:b' with real values between
 0.0 and 1.0, no spaces.
 .TP
 \fB\-t\fR [ \fB\-\-top\-color\fR ] arg
-Cube top color in 'r,g,b' format again with reals in
+Cube top color in 'r:g:b' format again with reals in
 [0,1].
 .TP
-\fB\-c\fR [ \fB\-\-transitions\fR ] arg Pages at wich to do a cube transition by default eg.
-2 4 7
-Must be the last option on the command line.
+\fB\-c\fR [ \fB\-\-transitions\fR ] 
+This option has been removed. Use
+the \transboxin transition in your beamer latex source to program
+transitions in advance.
 .TP
 \fB\-i\fR [ \fB\-\-input\-file\fR ] arg
 PDF file to show.
@@ -43,16 +44,14 @@ Don't activate full\-screen mode by default.
 .PP
 .SS Notes
 The "-i" option can be omitted, the first non-option string is treated
-as the input file. Since the "-c" option accepts an undetermined
-number of parameters it should be, if present, the last option on the
-command line.
+as the input file. 
 .SH "INTERACTIVE CONTROL"
 .TP
 \fBc, a\fP
 Will display the next/previous page with a cube transition effect.
 .TP
 \fBSPACE, PG-DOWN\fP
-Will switch to the next page with the programmed ("-c" option) effect.
+Will switch to the next page with the programmed effect.
 .TP
 \fBh, j, k, l, z\fP
 Will zoom into the predefined areas.
@@ -85,17 +84,19 @@ Will jump to page 5*(n-1).
 \fBpdfcube\fP foo.pdf
 Will display 'foo.pdf' in full-screen.
 .TP
-\fBpdfcube\fP foo.pdf \fB--bgcolor\fP 0,0,0 \fB--top-color\fP 0.6,0.2,0.2 \fB--transitions\fP 1 5 7
-Will display 'foo.pdf' with custom background and cube color, it
-will also prepare three transistions for 1-2 5-6 and 7-8 page turns.
+\fBpdfcube\fP foo.pdf \fB--bgcolor\fP 0:0:0 \fB--top-color\fP 0.6:0.2:0.2
+Will display 'foo.pdf' with custom background and cube color.
 .SH "BUGS"
 \fBpdfcube\fP(1) can view only PDF files with a 4:3 aspect ratio. This
 is a known "feature": the program is oriented to view presentations on
 a projected screen.
 .PP
+On some systems color values are locale dependant (e.g. you may have
+to write 0,6 instead of 0.6)
+.PP
 See http://code.100allora.it/pdfcube/report/ for the bugtracker of
-\fBpdfcube\fP(1) (you should obtain an account first). Or please report any bug
-to the author.
+\fBpdfcube\fP(1) (you should obtain an account contacting the author
+first). Or please report any bug to the author.
 .SH "AUTHORS"
 Written by Mirko Maischberger, <mailto:mirko.maischberger@gmail.com>
 and Karol Sokolowsky <sokoow@gmail.com>
@@ -107,5 +108,5 @@ teached me the value of open-source and open-culture.
 .SH "COPYING"
 This manpage is available under the same GPL v2 or later license as
 the main program, the original manpage was written by Alexander Wirt
-<mailto:formorer@debian.org> for the Debian distribution. The 0.0.3
-version is Copyright (C) 2008 Mirko Maischberger.
+<mailto:formorer@debian.org> for the Debian distribution. The 0.0.4
+version is Copyright (C) 2008-2011 Mirko Maischberger.
