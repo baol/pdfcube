@@ -72,16 +72,11 @@ enum animation { ANIM_NONE,
                  SWITCH_FW, SWITCH_BW
 };
 
-enum imagescale_t { IMAGE_FILL, IMAGE_SCALE, IMAGE_ZOOM };
-
-static GtkWidget* window;
-
-static imagescale_t imagescale = IMAGE_FILL;
 static gboolean fullscreen;
 static gboolean animating = FALSE;
-static animation active_animation = ANIM_NONE;
-static animation previous_animation = ANIM_NONE;
-static animation last_animation = ANIM_NONE;
+animation active_animation = ANIM_NONE;
+animation previous_animation = ANIM_NONE;
+animation last_animation = ANIM_NONE;
 
 // Cube Transitions on the command line 
 // (space advances simply or with the rotating cube)
@@ -139,20 +134,8 @@ public:
     double w,h;
     page = poppler_document_get_page(d, 1);
     poppler_page_get_size(page, &w, &h);
-
-    /*
-      GdkScreen* screen = gdk_screen_get_default();
-      gint monitor_num = gdk_screen_get_monitor_at_window(gdk_screen_get_default(), 
-      window->window);
-      GdkRectangle dest;
-      gdk_screen_get_monitor_geometry(screen,
-      monitor_num,
-      &dest);
-      
-    std::cerr << dest.width << " " << dest.height << std::endl;
-    */
-    tex_width = 320;
-    tex_height = 240;
+    tex_width = 1024;
+    tex_height = 768;
     pixmap =
       cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 
                                  (double)tex_width,
@@ -1876,6 +1859,8 @@ int
 main(int argc, char *argv[])
 {
 
+  GtkWidget *
+    window;
   GdkGLConfig *
     glconfig;
 
@@ -2010,9 +1995,6 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  /* Create and show the application window. */
-  window = create_window(glconfig);
-
   pc = new pdfcube(document);
 
   // Read transitions form PDF file
@@ -2046,7 +2028,10 @@ main(int argc, char *argv[])
             }
         }
     }
-    
+  
+  /* Create and show the application window. */
+  window = create_window(glconfig);
+  
   if(vm.count("no-fullscreen"))
     fullscreen = FALSE;
   else
