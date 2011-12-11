@@ -59,5 +59,6 @@ dnl -----------------------------------------------
 
 AC_OUTPUT(Makefile \
           src/Makefile \
-	  m4/Makefile
+	  m4/Makefile \
+	  man/Makefile
 )

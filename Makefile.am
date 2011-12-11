@@ -4,9 +4,9 @@
 ACLOCAL_AMFLAGS = -I m4
 
 #Build in these directories:
-SUBDIRS = src m4
+SUBDIRS = src 
 
 #Distribute these directories:
-DIST_SUBDIRS = src m4
+DIST_SUBDIRS = src m4 man
 
 EXTRA_DIST = autogen.sh
