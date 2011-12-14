@@ -1,3 +1,7 @@
+2011-12-14  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc, man/pdfcube.1, m4/ax_booost_program_options.m4:
+	Andreas Moog patches.
+
 2011-11-19  Mirko Maischberger  <mirko.maischberger@gmail.com>
 	* src/pdfcube.cc: Switching to poppler cairo rendering.
 	Reported by: Pino Toscano
@@ -45,6 +49,6 @@
 
 2006-12-16  Mirko Maischberger  <mirko.maischberger@gmail.com>
 	* Release 0.0.1
-	
+
 2006-12-09  Mirko Maischberger  <mirko.maischberger@gmail.com>
 	* Initial import
