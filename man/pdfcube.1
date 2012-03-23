@@ -1,4 +1,4 @@
-.TH "\fBpdfcube\fR"  "1" "11/2011" "pdfcube 0.0.4" "pdfcube presentation viewer"
+.TH "\fBpdfcube\fR"  "1" "03/2012" "pdfcube 0.0.5" "pdfcube presentation viewer"
 .SH "NAME"
 \fBpdfcube\fP - a PDF presentation viewer with 3D effects.
 .SH "SYNOPSIS"
@@ -41,6 +41,13 @@ PDF file to show.
 .TP
 \fB\-n\fR [ \fB\-\-no\-fullscreen\fR ]
 Don't activate full\-screen mode by default.
+.TP
+\fB\-\-demo\fR Automatically auto-advance presentation
+based on the frame duration PDF attribute or the specified program.
+.TP
+\fB\-\-program\fR A program in the form
+n:x:n:x:n:x... where n are durations in seconds and "x" can be either
+"c" for cube transition and "p" for plain transition. (e.g. \-\-program 5:c:3:p)
 .PP
 .SS Notes
 The "\-i" option can be omitted, the first non\-option string is treated
@@ -69,7 +76,10 @@ Will quick-switch to the previous page.
 Will quick-switch to the next page.
 .TP
 \fBf\fP
-Will switch full\-screen mode.
+Will toggle full\-screen mode.
+.TP
+\fBt\fP
+Will toggle auto-advance mode mode.
 .TP
 \fBCtrl-l\fP
 Will redraw the screen.
@@ -108,5 +118,5 @@ teached me the value of open-source and open-culture.
 .SH "COPYING"
 This manpage is available under the same GPL v2 or later license as
 the main program, the original manpage was written by Alexander Wirt
-<mailto:formorer@debian.org> for the Debian distribution. The 0.0.4
-version is Copyright (C) 2008-2011 Mirko Maischberger.
+<mailto:formorer@debian.org> for the Debian distribution. The 0.0.5
+version is Copyright (C) 2008-2012 Mirko Maischberger.

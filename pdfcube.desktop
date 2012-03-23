@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=PDFCube Presentation Viewer
+Name[it]=Visualizzatore di presentazione PDFCube
+TryExec=pdfcube
+Exec=pdfcube %U
+StartupNotify=true
+Terminal=false
+Type=Application
+Icon=pdfcube
+Categories=GNOME;GTK;Graphics;VectorGraphics;Viewer;
+MimeType=application/pdf

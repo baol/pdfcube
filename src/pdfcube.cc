@@ -2,8 +2,9 @@
 //
 // PDFCube source file - pdfcube.cc
 // 
-// Copyright (C) 2006-2011
+// Copyright (C) 2006-2012
 //               Mirko Maischberger <mirko.maischberger@gmail.com>
+// Copyright (C) 2008
 //               Karol Sokolowski   <sokoow@gmail.com>
 //
 // This program is free software; you can redistribute it and/or
@@ -83,6 +84,10 @@ animation last_animation = ANIM_NONE;
 // (space advances simply or with the rotating cube)
 // depending on the values in this array
 static bool *page_transition;
+static int *page_duration;
+static guint auto_advance_id = 0;
+static double pdf_aspect_ratio = 4.0/3.0;
+// static double screen_aspect_ratio = 16.0/10.0;
 
 //////////////////////////////////////////////////////////////////////////
 // Forward declarations
@@ -96,6 +101,7 @@ static void stop_animation(GtkWidget * widget);
 static GdkGLConfig *configure_gl(void);
 
 static GtkWidget *create_window(GdkGLConfig * glconfig);
+static GtkWidget *drawing_area;
 
 
 static GLfloat clear_color[4] = { 0.6, 0.0, 0.0, 0.0 };
@@ -131,18 +137,21 @@ public:
     texmap[1] = 1;
     texmap[2] = 2;
     cube_faces=0;
-    PopplerPage *page;
+    PopplerPage *page(0);
     double w,h;
-    page = poppler_document_get_page(d, 1);
+    page = poppler_document_get_page(d, 0);
     poppler_page_get_size(page, &w, &h);
+    pdf_aspect_ratio = ((double)w)/h;
+
+    // g_free(page);
     tex_width = 1024;
-    tex_height = 768;
+    tex_height = 1024; 
     pixmap =
       cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 
                                  (double)tex_width,
                                  (double)tex_height);
     context = cairo_create(pixmap);
-    cairo_scale(context, ((double)tex_width)/w, ((double)tex_height)/h);
+    cairo_scale(context, (((double)tex_width)/w), (((double)tex_height)/h));
 
     steps = new GLfloat[N_FRAMES];
     xsteps = new double[N_FRAMES];
@@ -959,6 +968,8 @@ public:
       render_page(prev_page());
     }
 
+    glDeleteTextures(1,
+                     &textures[texmap[forward ? 2 : 1]]);
     glBindTexture(GL_TEXTURE_RECTANGLE_ARB,
                   textures[texmap[forward ? 2 : 1]]);
     glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
@@ -1044,7 +1055,7 @@ protected:
   // renders the poppler page on a pixmap
   void
   render_page(int i) {
-    PopplerPage *page;
+    PopplerPage *page(0);
     double w, h;
     page = poppler_document_get_page(doc, i);
     poppler_page_get_size(page, &w, &h);
@@ -1054,6 +1065,7 @@ protected:
     cairo_fill(context);
     poppler_page_render(page, context);
     cairo_restore(context);
+    // g_free(page);
   }
 
   void buildLists()
@@ -1112,11 +1124,11 @@ protected:
       } else if (i <= 3) {
         glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
         glDisable(GL_TEXTURE_RECTANGLE_ARB);
-        glColor4f(top_color[0], top_color[1], top_color[2], top_color[4]);
+        glColor4f(top_color[0], top_color[1], top_color[2], top_color[3]);
       } else {
         glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
         glDisable(GL_TEXTURE_RECTANGLE_ARB);
-        glColor4f(top_color[0], top_color[1], top_color[2], top_color[4]);
+        glColor4f(top_color[0], top_color[1], top_color[2], top_color[3]);
       }
       glPolygonMode(GL_FRONT, GL_FILL);
       glCallList(cube_faces+i);
@@ -1268,6 +1280,31 @@ expose_event(GtkWidget * widget, GdkEventExpose * event, gpointer data)
 
   //g_mutex_unlock (gl_mutex);
 
+  return TRUE;
+}
+
+/***
+ *** Auto advance to next slide
+ ***/
+static
+gboolean
+auto_advance(GtkWidget * widget)
+{
+  if(sleeping())
+    {
+      if(page_duration[(pc->page()+1)%pc->pages()] + (page_transition[(pc->page()+1)%pc->pages()] ? 750 : 0) > 0)
+        auto_advance_id = g_timeout_add(page_duration[(pc->page()+1)%pc->pages()] + (page_transition[(pc->page()+1)%pc->pages()] ? 750 : 0),
+                                        (GSourceFunc)auto_advance, 
+                                        widget);
+      else
+        auto_advance_id = 0;
+      cerr << "auto advance mode: " << (page_duration[(pc->page()+1)%pc->pages()] + (page_transition[(pc->page()+1)%pc->pages()] ? 750 : 0)) << endl;
+      if (page_transition[(pc->page()+1)%pc->pages()])
+        start_animation(widget, CUBE_NEXT);
+      else
+        start_animation(widget, SWITCH_FW);
+      return FALSE;
+    }
   return TRUE;
 }
 
@@ -1426,6 +1463,24 @@ key_press_event(GtkWidget * widget, GdkEventKey * event, gpointer data)
     {
       switch (event->keyval) {
         
+      case GDK_t:
+        if (sleeping())
+          {
+            if (auto_advance_id == 0) 
+              {
+                auto_advance_id = g_timeout_add(page_duration[pc->page()],
+                                                (GSourceFunc)auto_advance, 
+                                                widget);
+                cerr << "auto advance mode: " << page_duration[pc->page()] << endl;
+              }
+            else
+              {
+                g_source_remove(auto_advance_id);
+                auto_advance_id = 0;
+              }
+          }
+        break;
+
         // return to page 1
       case GDK_1:
       case GDK_2:
@@ -1711,11 +1766,9 @@ create_window(GdkGLConfig * glconfig)
 {
   GtkWidget *
     window;
-  GtkWidget *
-    vbox;
-  GtkWidget *
-    drawing_area;
 
+  GtkWidget* alignment;
+  GtkWidget* keep_aspect;
   /*
    * Top-level window.
    */
@@ -1731,12 +1784,10 @@ create_window(GdkGLConfig * glconfig)
                    G_CALLBACK(gtk_main_quit), NULL);
 
   /*
-   * VBox.
+   * Aspect ratio frame
    */
-
-  vbox = gtk_vbox_new(FALSE, 0);
-  gtk_container_add(GTK_CONTAINER(window), vbox);
-  gtk_widget_show(vbox);
+  keep_aspect = gtk_aspect_frame_new(NULL, 0.5, 0.5, pdf_aspect_ratio, FALSE);
+  gtk_widget_show(keep_aspect);
 
   /*
    * Drawing area to draw OpenGL scene.
@@ -1774,7 +1825,7 @@ create_window(GdkGLConfig * glconfig)
   /* key_press_event handler for top-level window */
   g_signal_connect_swapped(G_OBJECT(window), "key_press_event",
                            G_CALLBACK(key_press_event), drawing_area);
-
+  
   /* For timeout function. */
   g_signal_connect(G_OBJECT(drawing_area), "map_event",
                    G_CALLBACK(map_event), NULL);
@@ -1783,8 +1834,21 @@ create_window(GdkGLConfig * glconfig)
   g_signal_connect(G_OBJECT(drawing_area), "visibility_notify_event",
                    G_CALLBACK(visibility_notify_event), NULL);
 
-  gtk_box_pack_start(GTK_BOX(vbox), drawing_area, TRUE, TRUE, 0);
+  gtk_container_add(GTK_CONTAINER(window), keep_aspect);
+  gtk_container_add(GTK_CONTAINER(keep_aspect), drawing_area);
 
+  gtk_container_set_border_width (GTK_CONTAINER (window), 0); 
+  gtk_container_set_border_width (GTK_CONTAINER (keep_aspect), 0); 
+  // gtk_container_set_border_width (GTK_CONTAINER (drawing_area), 0); 
+
+  gtk_frame_set_shadow_type(GTK_FRAME(keep_aspect), GTK_SHADOW_NONE);
+
+  GdkColor color;
+  color.red = clear_color[0]*65535;
+  color.green = clear_color[1]*65535;
+  color.blue = clear_color[2]*65535;
+  gtk_widget_modify_bg(window, GTK_STATE_NORMAL, &color);
+  
   gtk_widget_show(drawing_area);
 
   return window;
@@ -1883,9 +1947,11 @@ main(int argc, char *argv[])
     ("top-color,t", po::value<std::string>(),
      "Cube top color in 'r:g:b' format again with reals in [0,1].")
     ("input-file,i", po::value<std::string>(), "PDF file to show.")
+    ("demo", "auto advance slides based on transition duration (transduration)")
+    ("program", po::value<std::string>(), "Specify a program: duration:transition:duration:transition:... e.g. 5::5:c:7: (overrides transboxin and transduration PDF attributes)")
     ("no-fullscreen,n", 
      "Don't activate full-screen mode by default.");
-
+  
   po::positional_options_description p;
   p.add("input-file", -1);
 
@@ -1897,9 +1963,9 @@ main(int argc, char *argv[])
   string input_file;
 
   if(vm.count("help")) {
-    cout << endl << "pdfcube 0.0.4" << endl;
+    cout << endl << "pdfcube 0.0.5" << endl;
     cout << "=============" << endl;
-    cout << "Copyright (C) 2006-2011 Mirko Maischberger <mirko.maischberger@gmail.com>" << endl;
+    cout << "Copyright (C) 2006-2012 Mirko Maischberger <mirko.maischberger@gmail.com>" << endl;
     cout << "                   2008 Karol Sokolowski   <sokoow@gmail.com>" <<  endl << endl;
     cout << opts << endl;
     cout << endl;
@@ -1923,7 +1989,7 @@ main(int argc, char *argv[])
   }
   
   if(vm.count("version")) {
-    cout << "pdfcube 0.0.4" << endl;
+    cout << "pdfcube 0.0.5" << endl;
     return 0;
   }
 
@@ -2000,18 +2066,21 @@ main(int argc, char *argv[])
 
   // Read transitions form PDF file
   page_transition = new bool[pc->pages()];
+  page_duration = new int[pc->pages()];
   for(int ii(0); ii != pc->pages(); ++ii)
     {
       PopplerPage* page = 
         poppler_document_get_page(document, ii);
       PopplerPageTransition* transition = 
         poppler_page_get_transition(page);
+
       if(!transition) 
         {
           page_transition[ii] = false;
         }
       else
         {
+          page_duration[ii] = (transition->duration * 1000);
           switch(transition->type)
             {
             case POPPLER_PAGE_TRANSITION_REPLACE:
@@ -2028,8 +2097,33 @@ main(int argc, char *argv[])
               break;
             }
         }
+      // g_free(page);
+      // g_free(transition);
     }
   
+  if(vm.count("program"))
+    {
+      std::istringstream iss(vm["program"].as<std::string>());
+      int c1(0), c2(0);
+      for(;;)
+        {
+          string v;
+          if(getline(iss, v, ':')) 
+            page_duration[c1++] = ::atof(v.c_str())*1000;
+          else break;
+          if(getline(iss, v, ':')) 
+            page_transition[(++c2)%pc->pages()] = (v == "c");
+          else break;
+          if(c1 == pc->pages()) break;
+        }
+    }
+  
+  cerr << "program: ";
+  for(int pp(0); pp!=pc->pages(); ++pp)
+    cerr  << page_duration[pp] << ":" 
+          << (page_transition[(pp+1)%pc->pages()] ? 'c' : 'p') << ":";
+  cerr << endl;
+
   /* Create and show the application window. */
   window = create_window(glconfig);
   
@@ -2037,12 +2131,20 @@ main(int argc, char *argv[])
     fullscreen = FALSE;
   else
     fullscreen = TRUE;
-
+  
   if(fullscreen)
     gtk_window_fullscreen((GtkWindow *) (window));
   
   gtk_widget_show(window);
-
+  
+  if(vm.count("demo"))
+    {
+      auto_advance_id = g_timeout_add(page_duration[pc->page()],
+                                      (GSourceFunc)auto_advance, 
+                                      drawing_area);
+      cerr << "auto advance mode: " << page_duration[pc->page()] << endl;
+    }
+  
   gtk_main();
 
   return 0;

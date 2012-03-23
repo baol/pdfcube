@@ -8,7 +8,7 @@ dnl -----------------------------------------------
 dnl Package name and version number
 dnl -----------------------------------------------
 
-AM_INIT_AUTOMAKE(pdfcube, 0.0.4)
+AM_INIT_AUTOMAKE(pdfcube, 0.0.5)
 
 AC_CONFIG_MACRO_DIR([m4])
 

@@ -1,3 +1,7 @@
+2012-03-23  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc, man/pdfcube.1: Improvements requested by Carl
+	Hoffman.
+
 2011-12-14  Mirko Maischberger  <mirko.maischberger@gmail.com>
 	* src/pdfcube.cc, man/pdfcube.1, m4/ax_booost_program_options.m4:
 	Andreas Moog patches.

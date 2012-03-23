@@ -9,4 +9,4 @@ SUBDIRS = src
 #Distribute these directories:
 DIST_SUBDIRS = src m4 man
 
-EXTRA_DIST = autogen.sh
+EXTRA_DIST = autogen.sh pdfcube.desktop
