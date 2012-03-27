@@ -30,8 +30,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include <sstream>
-
+#include <strstream>
+#include <fstream>
 // Removing GTK+ dependencies to ease portability.
 // Gtk+ (pkg-config gtk+-2.0)
 #include <gtk/gtk.h>
@@ -1298,7 +1298,9 @@ auto_advance(GtkWidget * widget)
                                         widget);
       else
         auto_advance_id = 0;
+#ifndef NDEBUG
       cerr << "auto advance mode: " << (page_duration[(pc->page()+1)%pc->pages()] + (page_transition[(pc->page()+1)%pc->pages()] ? 750 : 0)) << endl;
+#endif
       if (page_transition[(pc->page()+1)%pc->pages()])
         start_animation(widget, CUBE_NEXT);
       else
@@ -1471,7 +1473,9 @@ key_press_event(GtkWidget * widget, GdkEventKey * event, gpointer data)
                 auto_advance_id = g_timeout_add(page_duration[pc->page()],
                                                 (GSourceFunc)auto_advance, 
                                                 widget);
+#ifndef NDEBUG
                 cerr << "auto advance mode: " << page_duration[pc->page()] << endl;
+#endif
               }
             else
               {
@@ -1935,29 +1939,69 @@ main(int argc, char *argv[])
   /* Initialize GtkGLExt. */
   gtk_gl_init(&argc, &argv);
 
-  po::options_description opts("Available options");
-
-  opts.add_options()
+  po::options_description generic("Generic options");
+  generic.add_options()
     ("help,h", 
      "This help message.")
     ("version,v",
-     "Version information")
+     "Version information");
+
+  po::options_description opts("Available options");
+  opts.add_options()
     ("bgcolor,b", po::value<std::string>(),
      "Background color is 'r:g:b' with real values between 0.0 and 1.0, no spaces.")
     ("top-color,t", po::value<std::string>(),
      "Cube top color in 'r:g:b' format again with reals in [0,1].")
-    ("input-file,i", po::value<std::string>(), "PDF file to show.")
-    ("demo", "auto advance slides based on transition duration (transduration)")
-    ("program", po::value<std::string>(), "Specify a program: duration:transition:duration:transition:... e.g. 5::5:c:7: (overrides transboxin and transduration PDF attributes)")
+    ("demo", "auto advance slides based on transition duration (\\transduration)")
+    ("program", po::value<std::string>(), "Specify a program: duration:transition:duration:transition:... e.g. 5::5:c:7: (overrides \\transboxin and \\transduration PDF attributes)")
     ("no-fullscreen,n", 
      "Don't activate full-screen mode by default.");
+
+  po::options_description hidden("Hidden options");
+  hidden.add_options()
+    ("input-file,i", po::value<std::string>(), "PDF file to show.");
   
   po::positional_options_description p;
   p.add("input-file", -1);
 
+  po::options_description commandline;
+  commandline.add(generic).add(opts).add(hidden);
+    
+  po::options_description dotopts;
+  dotopts.add(opts);
+
+  po::options_description visible;
+  visible.add(generic).add(opts);
+    
   po::variables_map vm;
-  po::store(po::command_line_parser(argc, argv).
-            options(opts).positional(p).run(), vm);
+
+  char* home(0);
+  home = getenv("HOME");
+  if(home)
+    {
+      std::ostrstream dotfilename;
+      dotfilename << home << "/.pdfcuberc";
+      std::cerr << "Reading options from " << dotfilename.str() << std::endl;
+      std::ifstream dotfile(dotfilename.str());
+      if(dotfile.good())
+        {
+          try {
+            po::store(po::parse_config_file(dotfile, dotopts), vm);
+          } catch (const boost::program_options::error& e) {
+            std::cerr << "Error parsing the .pdfcuberc dotfile: " << e.what() << std::endl;
+            return -1;
+          }
+        }
+    }
+
+  try {
+    po::store(po::command_line_parser(argc, argv).
+              options(commandline).positional(p).run(), vm);
+  } catch (const boost::program_options::error& e) {
+    std::cerr << "Command line option parsing error: " << e.what() << std::endl;
+    return -1;
+  }
+  
   po::notify(vm);
 
   string input_file;
@@ -1967,7 +2011,7 @@ main(int argc, char *argv[])
     cout << "=============" << endl;
     cout << "Copyright (C) 2006-2012 Mirko Maischberger <mirko.maischberger@gmail.com>" << endl;
     cout << "                   2008 Karol Sokolowski   <sokoow@gmail.com>" <<  endl << endl;
-    cout << opts << endl;
+    cout << visible << endl;
     cout << endl;
     cout << "Usage examples:" << endl;
     cout << "  $ pdfcube" << endl;
@@ -2069,6 +2113,9 @@ main(int argc, char *argv[])
   page_duration = new int[pc->pages()];
   for(int ii(0); ii != pc->pages(); ++ii)
     {
+      page_transition[ii] = false;
+      page_duration[ii] = 0;
+
       PopplerPage* page = 
         poppler_document_get_page(document, ii);
       PopplerPageTransition* transition = 
@@ -2097,25 +2144,30 @@ main(int argc, char *argv[])
               break;
             }
         }
-      // g_free(page);
-      // g_free(transition);
     }
   
   if(vm.count("program"))
     {
       std::istringstream iss(vm["program"].as<std::string>());
       int c1(0), c2(0);
+      int last_duration(0);
+      bool last_transition(false);
       for(;;)
         {
           string v;
           if(getline(iss, v, ':')) 
-            page_duration[c1++] = ::atof(v.c_str())*1000;
+            last_duration = page_duration[c1++] = ::atof(v.c_str())*1000;
           else break;
           if(getline(iss, v, ':')) 
-            page_transition[(++c2)%pc->pages()] = (v == "c");
+            last_transition = page_transition[(++c2)%pc->pages()] = (v == "c");
           else break;
           if(c1 == pc->pages()) break;
         }
+      // repeat last option for all following slides
+      for(; c1!=pc->pages(); ++c1)
+        page_duration[c1] = last_duration;
+      for(; c2!=pc->pages(); ++c2)
+        page_transition[(c2+1)%pc->pages()] = last_transition;
     }
   
   cerr << "program: ";
@@ -2142,7 +2194,9 @@ main(int argc, char *argv[])
       auto_advance_id = g_timeout_add(page_duration[pc->page()],
                                       (GSourceFunc)auto_advance, 
                                       drawing_area);
+#ifndef NDEBUG
       cerr << "auto advance mode: " << page_duration[pc->page()] << endl;
+#endif
     }
   
   gtk_main();

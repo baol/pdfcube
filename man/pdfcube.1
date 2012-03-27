@@ -3,7 +3,9 @@
 \fBpdfcube\fP - a PDF presentation viewer with 3D effects.
 .SH "SYNOPSIS"
 .HP 24
-\fBpdfcube\fP \fIFILE\fP [\fB--help\fP] [\fB--bgcolor\fP \fIf:f:f\fP] [\fB--top-color\fP \fIf:f:f\fP] [\fB--no-fullscreen\fP]  
+\fBpdfcube\fP [\fIFILE\fP] [\fB--help\fP] [\fB--bgcolor\fP \fIf:f:f\fP] \
+[\fB--top-color\fP \fIf:f:f\fP] [\fB--no-fullscreen\fP] [\fB--demo\fP] \
+[\fB--program\fP \fIn:x:n:x:...\fP] 
 .SH "DESCRIPTION"
 .PP
 \fBpdfcube\fP(1) is a tiny (about 30KiB) viewer for Portable Document
@@ -12,6 +14,8 @@ PDF presentation files. It can also zoom on 5 predefined areas with a
 smooth zooming effect. This program is suited only for landscape PDF
 files, mostly presentations done with LaTeX (Beamer, Prosper, etc.) or
 OpenOffice.org Impress.
+.PP
+If FILE is not given a file\-open dialog box is shown to the user.
 .PP
 \fBpdfcube\fP(1) is an open source, low-effort, spare-time, money-less
 project. Your help is welcome!
@@ -31,27 +35,21 @@ Background color is 'r:g:b' with real values between
 Cube top color in 'r:g:b' format again with reals in
 [0,1].
 .TP
-\fB\-c\fR [ \fB\-\-transitions\fR ] 
-This option has been removed. Use
-the \transboxin transition in your beamer latex source to program
-transitions in advance.
-.TP
-\fB\-i\fR [ \fB\-\-input\-file\fR ] arg
-PDF file to show.
-.TP
 \fB\-n\fR [ \fB\-\-no\-fullscreen\fR ]
 Don't activate full\-screen mode by default.
 .TP
-\fB\-\-demo\fR Automatically auto-advance presentation
-based on the frame duration PDF attribute or the specified program.
+\fB\-\-demo\fR Automatically auto-advance presentation based on the
+frame duration PDF attribute (\\transduration when using Latex Beamer)
+or the specified program (see the \-\-program option).
 .TP
 \fB\-\-program\fR A program in the form
 n:x:n:x:n:x... where n are durations in seconds and "x" can be either
-"c" for cube transition and "p" for plain transition. (e.g. \-\-program 5:c:3:p)
+"c" for cube transition and "p" for plain
+transition. (e.g. \-\-program 5:c:3:p). The last program is used for
+all remaining slides.
 .PP
 .SS Notes
-The "\-i" option can be omitted, the first non\-option string is treated
-as the input file. 
+The first (and only) non\-option string is treated as the input file.
 .SH "INTERACTIVE CONTROL"
 .TP
 \fBc, a\fP
@@ -79,7 +77,7 @@ Will quick-switch to the next page.
 Will toggle full\-screen mode.
 .TP
 \fBt\fP
-Will toggle auto-advance mode mode.
+Will toggle auto-advance (demo) mode.
 .TP
 \fBCtrl-l\fP
 Will redraw the screen.
@@ -89,17 +87,32 @@ Will jump to the page corresponding to the n-th programmed transition (if any).
 .TP
 \fB1, 2, ..., 9\fP
 Will jump to page 5*(n-1).
+.SH "CONFIGURATION FILE"
+.PP
+If the \fI~/.pdfcuberc\fP file exists, it is used as a configuration
+file. The configuration file uses the same options as the command line
+(using the boost program options syntax). e.g.
+.PP
+.RS
+.br
+demo=true
+.br
+bgcolor=0:0:0
+.br
+program=5:p
+.RE
 .SH "EXAMPLES"
 .TP
 \fBpdfcube\fP foo.pdf
 Will display 'foo.pdf' in full-screen.
 .TP
+\fBpdfcube\fP --demo --program 5:c foo.pdf
+Will display 'foo.pdf' in full-screen and will do a cube transition
+every 5 seconds.
+.TP
 \fBpdfcube\fP foo.pdf \fB--bgcolor\fP 0:0:0 \fB--top-color\fP 0.6:0.2:0.2
 Will display 'foo.pdf' with custom background and cube color.
 .SH "BUGS"
-\fBpdfcube\fP(1) can view only PDF files with a 4:3 aspect ratio. This
-is a known "feature": the program is oriented to view presentations on
-a projected screen.
 .PP
 On some systems color values are locale dependent (e.g. you may have
 to write 0,6 instead of 0.6)
@@ -108,7 +121,7 @@ See http://code.100allora.it/pdfcube/report/ for the bugtracker of
 \fBpdfcube\fP(1) (you should obtain an account contacting the author
 first). Or please report any bug to the author.
 .SH "AUTHORS"
-Written by Mirko Maischberger, <mailto:mirko.maischberger@gmail.com>
+Written by Mirko Maischberger <mailto:mirko.maischberger@gmail.com>
 and Karol Sokolowsky <sokoow@gmail.com>
 .SH "RESOURCES"
 Main web site: http://code.100allora.it/pdfcube/
