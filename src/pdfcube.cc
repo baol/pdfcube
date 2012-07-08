@@ -30,7 +30,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include <strstream>
+#include <sstream>
 #include <fstream>
 // Removing GTK+ dependencies to ease portability.
 // Gtk+ (pkg-config gtk+-2.0)
@@ -1979,16 +1979,18 @@ main(int argc, char *argv[])
   home = getenv("HOME");
   if(home)
     {
-      std::ostrstream dotfilename;
-      dotfilename << home << "/.pdfcuberc";
-      std::cerr << "Reading options from " << dotfilename.str() << std::endl;
-      std::ifstream dotfile(dotfilename.str());
+      std::ostringstream dotfilebuf;
+      dotfilebuf << home << "/.pdfcuberc";
+      string dotfilename(dotfilebuf.str());
+      std::cerr << "Reading options from " << dotfilename << std::endl;
+      std::ifstream dotfile(dotfilename.c_str());
       if(dotfile.good())
         {
           try {
             po::store(po::parse_config_file(dotfile, dotopts), vm);
           } catch (const boost::program_options::error& e) {
-            std::cerr << "Error parsing the .pdfcuberc dotfile: " << e.what() << std::endl;
+            std::cerr << "Error parsing the .pdfcuberc dotfile: " 
+                      << e.what() << std::endl;
             return -1;
           }
         }
