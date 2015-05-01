@@ -1,0 +1,135 @@
+.TH "\fBpdfcube\fR"  "1" "03/2012" "pdfcube 0.0.5" "pdfcube presentation viewer"
+.SH "NAME"
+\fBpdfcube\fP - a PDF presentation viewer with 3D effects.
+.SH "SYNOPSIS"
+.HP 24
+\fBpdfcube\fP [\fIFILE\fP] [\fB--help\fP] [\fB--bgcolor\fP \fIf:f:f\fP] \
+[\fB--top-color\fP \fIf:f:f\fP] [\fB--no-fullscreen\fP] [\fB--demo\fP] \
+[\fB--program\fP \fIn:x:n:x:...\fP] 
+.SH "DESCRIPTION"
+.PP
+\fBpdfcube\fP(1) is a tiny (about 30KiB) viewer for Portable Document
+Format (PDF) files that adds spinning cube transition effect to your
+PDF presentation files. It can also zoom on 5 predefined areas with a
+smooth zooming effect. This program is suited only for landscape PDF
+files, mostly presentations done with LaTeX (Beamer, Prosper, etc.) or
+OpenOffice.org Impress.
+.PP
+If FILE is not given a file\-open dialog box is shown to the user.
+.PP
+\fBpdfcube\fP(1) is an open source, low-effort, spare-time, money-less
+project. Your help is welcome!
+.SH "OPTIONS"
+.TP
+\fB\-h\fR [ \fB\-\-help\fR ]
+This help message.
+.TP
+\fB\-v\fR [ \fB\-\-version\fR ]
+Version information
+.TP
+\fB\-b\fR [ \fB\-\-bgcolor\fR ] arg
+Background color is 'r:g:b' with real values between
+0.0 and 1.0, no spaces.
+.TP
+\fB\-t\fR [ \fB\-\-top\-color\fR ] arg
+Cube top color in 'r:g:b' format again with reals in
+[0,1].
+.TP
+\fB\-n\fR [ \fB\-\-no\-fullscreen\fR ]
+Don't activate full\-screen mode by default.
+.TP
+\fB\-\-demo\fR Automatically auto-advance presentation based on the
+frame duration PDF attribute (\\transduration when using Latex Beamer)
+or the specified program (see the \-\-program option).
+.TP
+\fB\-\-program\fR A program in the form
+n:x:n:x:n:x... where n are durations in seconds and "x" can be either
+"c" for cube transition and "p" for plain
+transition. (e.g. \-\-program 5:c:3:p). The last program is used for
+all remaining slides.
+.PP
+.SS Notes
+The first (and only) non\-option string is treated as the input file.
+.SH "INTERACTIVE CONTROL"
+.TP
+\fBc, a\fP
+Will display the next/previous page with a cube transition effect.
+.TP
+\fBSPACE, PG-DOWN\fP
+Will switch to the next page with the programmed effect.
+.TP
+\fBh, j, k, l, z\fP
+Will zoom into the predefined areas.
+.TP
+\fBg\fP
+Will undo any zoom.
+.TP
+\fBESC, Ctrl-q\fP
+Will exit pdfcube immediately.
+.TP
+\fBPG-UP, Left-Arrow\fP
+Will quick-switch to the previous page.
+.TP
+\fBRight-Arrow\fP
+Will quick-switch to the next page.
+.TP
+\fBf\fP
+Will toggle full\-screen mode.
+.TP
+\fBt\fP
+Will toggle auto-advance (demo) mode.
+.TP
+\fBCtrl-l\fP
+Will redraw the screen.
+.TP
+\fBCtrl-1, Ctrl-2, ..., Ctrl-9\fP
+Will jump to the page corresponding to the n-th programmed transition (if any).
+.TP
+\fB1, 2, ..., 9\fP
+Will jump to page 5*(n-1).
+.SH "CONFIGURATION FILE"
+.PP
+If the \fI~/.pdfcuberc\fP file exists, it is used as a configuration
+file. The configuration file uses the same options as the command line
+(using the boost program options syntax). e.g.
+.PP
+.RS
+.br
+demo=true
+.br
+bgcolor=0:0:0
+.br
+program=5:p
+.RE
+.SH "EXAMPLES"
+.TP
+\fBpdfcube\fP foo.pdf
+Will display 'foo.pdf' in full-screen.
+.TP
+\fBpdfcube\fP --demo --program 5:c foo.pdf
+Will display 'foo.pdf' in full-screen and will do a cube transition
+every 5 seconds.
+.TP
+\fBpdfcube\fP foo.pdf \fB--bgcolor\fP 0:0:0 \fB--top-color\fP 0.6:0.2:0.2
+Will display 'foo.pdf' with custom background and cube color.
+.SH "BUGS"
+.PP
+On some systems color values are locale dependent (e.g. you may have
+to write 0,6 instead of 0.6)
+.PP
+See http://code.100allora.it/pdfcube/report/ for the bugtracker of
+\fBpdfcube\fP(1) (you should obtain an account contacting the author
+first). Or please report any bug to the author.
+.SH "AUTHORS"
+Written by Mirko Maischberger <mailto:mirko.maischberger@gmail.com>
+and Karol Sokolowsky <sokoow@gmail.com>
+.SH "RESOURCES"
+Main web site: http://code.100allora.it/pdfcube/
+.SH "THANKS"
+I'd like to thank the LILiK laboratory in Florence, Italy for having
+teached me the value of open-source and open-culture.
+.SH "COPYING"
+This manpage is available under the same GPL v2 or later license as
+the main program, the original manpage was written by Alexander Wirt
+<mailto:formorer@debian.org> for the Debian distribution. The 0.0.5
+version is Copyright (C) 2008-2012 Mirko Maischberger.

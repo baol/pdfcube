@@ -1,0 +1,15 @@
+Source: pdfcube
+Section: unknown
+Priority: extra
+Maintainer: mirko <mirko.maischberger@gmail.com>
+Build-Depends: debhelper (>= 5), autotools-dev
+Standards-Version: 3.7.2
+
+Package: pdfcube
+Architecture: i386
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: PDF on a cube to add some special effects to your projected presentations
+ PDF Cube renders PDF presentations with special 3D effects (the
+ omnipresent rotating cube and 5 predefined zoom animations). It adds
+ eye-candy to your PDF presentations, even Latex, Beamer and Prosper
+ ones. Needs OpenGL/DRI. Tested on Radeon 9250 and GPL xorg drivers.

@@ -1,0 +1,58 @@
+2012-03-23  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc, man/pdfcube.1: Improvements requested by Carl
+	Hoffman.
+
+2011-12-14  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc, man/pdfcube.1, m4/ax_booost_program_options.m4:
+	Andreas Moog patches.
+
+2011-11-19  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc: Switching to poppler cairo rendering.
+	Reported by: Pino Toscano
+	* man/pdfcube.1: Update the manpage to reflect the new features.
+
+2009-01-06  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc: Removed --transition switch in favor of reading
+	transitions from the PDF file. Added a dialog to open files when
+	no file is given on the command line (this is so the first "GUI"
+	version of PDFCube)
+
+2008-11-23  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* man/: moved pdfcube.1 manpage inside man folder.
+
+2008-11-21  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc: cleand code, fixed code to calc animation steps,
+	added program options via boost program options library. Removed
+	fog effect from compilation. Added the option to customize colors.
+	* pdfcube.1: updated the manpage to reflect changes.
+
+2008-02-28  Karol Sokolowski   <sokoow@gmail.com>
+	* src/pdfcube.cc: cleaned code, added code to calc
+	animation steps instead of having it hard-coded, added
+	backward cube animation and fog.
+
+2007-11-18  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* src/pdfcube.cc: Huang Guo-Hao suggested some useful
+	modifications to the initialization params of OpenGL
+
+2007-01-29  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* pdfcube.1.txt: added the manpage provided by Alexander Wirt,
+	with few modifications.
+
+2006-12-24  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* configure.ac, src/Makefile.am: Removed unneeded glut and libtool
+	dependencies
+	Reported by: Frank Boheme
+
+2006-12-19  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* debian/: Package debianization.
+	* src/llcube.cc: draft of low level cube code.
+
+2006-12-19  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* Autotools, release 0.0.2
+
+2006-12-16  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* Release 0.0.1
+
+2006-12-09  Mirko Maischberger  <mirko.maischberger@gmail.com>
+	* Initial import
