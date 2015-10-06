@@ -1,4 +1,7 @@
-= PDFCube 0.0.5 =
+PDFCube 0.0.5
+=============
+
+[![Build Status](https://drone.io/github.com/baol/pdfcube/status.png)](https://drone.io/github.com/baol/pdfcube/latest)
 
 PDFCube renders PDF presentations with special 3D effects. It adds
 eye-candy to your PDF presentations, specially Latex, Beamer and
@@ -16,7 +19,8 @@ you manage to get it working it's fairly stable and usable.
 If you want to hack on the code feel free to contact me at
 <mirko.maischberger@gmail.com> either via mail or via jabber.
 
-== BUGS ==
+BUGS
+----
 
 This program is intended to present landscape PDF files on 4:3
 projection screen, it is not suited to view generic PDF files. If you
@@ -35,7 +39,8 @@ application at a time. Try disabling the wm effects.
 With some older versions of libpoppler there are some rendering
 errors, this should be solved by recent poppler releases.
 
-== Conditional compilation macros and Dependencies ==
+Conditional compilation macros and Dependencies
+-----------------------------------------------
 
 You can define NDEBUG to get rid of debug output. You can try
 ENABLE_FOG if you like, the default is to have it off.
@@ -46,15 +51,18 @@ ENABLE_FOG if you like, the default is to have it off.
  * GtkGlExt (Debian/Ubuntu package: libgtkglext1-dev)
  * Boost C++ Program Option Library
 
-== Contact information ==
+Contact information
+-------------------
 
 Feel free to write to <mirko.maischberger@gmail.com>
 
-== Word of Mouth ==
+Word of Mouth
+-------------
 
 If you like this project please support by voting on this sites or blogging it:
+
  * http://freshmeat.net/projects/pdfcube
  * http://www.gnomefiles.org/app.php/PDF_Cube
 
 Happy Hacking
-- Mirko Maischberger
+> Mirko Maischberger
