@@ -2,13 +2,12 @@ dnl --------------------------------
 dnl Initialization macros.
 dnl --------------------------------
 
-AC_INIT(src/pdfcube.cc)
+AC_INIT([src/pdfcube.cc], [0.0.5])
+AM_INIT_AUTOMAKE([foreign])
 
 dnl -----------------------------------------------
 dnl Package name and version number
 dnl -----------------------------------------------
-
-AM_INIT_AUTOMAKE(pdfcube, 0.0.5)
 
 AC_CONFIG_MACRO_DIR([m4])
 

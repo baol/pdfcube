@@ -4,9 +4,9 @@
 ACLOCAL_AMFLAGS = -I m4
 
 #Build in these directories:
-SUBDIRS = src 
+SUBDIRS = src
 
 #Distribute these directories:
 DIST_SUBDIRS = src m4 man
 
-EXTRA_DIST = autogen.sh pdfcube.desktop
+EXTRA_DIST = autogen.sh pdfcube.desktop README.md LICENSE COPYING AUTHORS ChangeLog INSTALL NEWS
