@@ -54,7 +54,7 @@ ENABLE_FOG if you like, the default is to have it off.
 Contact information
 -------------------
 
-Feel free to write to <mirko.maischberger@gmail.com>
+Feel free to write to <mirko.maischberger@gmail.com> or send Decred to DsYhULtSEwe4HhRF3uvBRroQfX6R2gBi5M4 ;)
 
 Word of Mouth
 -------------
