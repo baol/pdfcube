@@ -1,55 +1,40 @@
-PDFCube 0.0.5
+PDFCube 0.1.0
 =============
 
-[![Build Status](https://drone.io/github.com/baol/pdfcube/status.png)](https://drone.io/github.com/baol/pdfcube/latest)
-
-PDFCube renders PDF presentations with special 3D effects. It adds
-eye-candy to your PDF presentations, specially Latex, Beamer and
-Prosper ones.
+PDFCube presents PDF slide decks with animated 3D cube transitions,
+programmed slide timing, and keyboard-controlled zoom regions. It is especially
+useful with presentations created by LaTeX Beamer or office suites.
 
 Please see the man page for usage information.
 
-You'll need an OpenGL DRI enabled Xorg. GPL ATI 9250 driver is OK,
-i've not tested other cards but had feedback from many users on the
-net about a wide range of cards.
+Build
+-----
 
-This is alpha software (and right now it's a quick hack too), but once
-you manage to get it working it's fairly stable and usable.
+The maintained application uses C++20, GTK 4 `GtkGLArea`, libepoxy,
+shader-based OpenGL 3.3, Poppler GLib, Cairo, Boost Program Options, and Meson.
+The previous GtkGLExt/fixed-function implementation remains in
+`src/pdfcube.cc` as historical source, but is not part of the Meson build.
 
-If you want to hack on the code feel free to contact me at
-<mirko.maischberger@gmail.com> either via mail or via jabber.
+On Debian 13 or Ubuntu 24.04, install Meson, Ninja, a C++ compiler, and the
+development packages for GTK 4, libepoxy, Poppler GLib, Cairo, and Boost
+Program Options. Then run:
 
-BUGS
-----
+```
+meson setup build
+meson compile -C build
+meson test -C build --print-errorlogs
+```
 
-This program is intended to present landscape PDF files on 4:3
-projection screen, it is not suited to view generic PDF files. If you
-try to view portrait files you'll see only the top of each page. This
-is not so strange since this program is not intended as a generic PDF
-viewer but as a specific presentation tool.
+Run a presentation with:
 
-There is a little glitch in the animation when going back with cube
-animation. I hope is not too annoying.
+```
+./build/src/pdfcube presentation.pdf
+```
 
-If you experience other glitches it's probably due to some compositing
-software (KDE Kwin, Compiz or others) this is a limitation in Xorg and
-the graphic drivers: you can only have one OpenGL accelerated
-application at a time. Try disabling the wm effects.
-
-With some older versions of libpoppler there are some rendering
-errors, this should be solved by recent poppler releases.
-
-Conditional compilation macros and Dependencies
------------------------------------------------
-
-You can define NDEBUG to get rid of debug output. You can try
-ENABLE_FOG if you like, the default is to have it off.
-
- * Linux/BSD with Xorg
- * Poppler (>=0.5.4 recommended) (Debian/Ubuntu package:
-   libpoppler-dev libpoppler-glib-dev)
- * GtkGlExt (Debian/Ubuntu package: libgtkglext1-dev)
- * Boost C++ Program Option Library
+The test suite verifies the command-line contract and produces deterministic
+headless rendering snapshots under Xvfb. This covers page rendering, cube
+transitions, configured colors, and command-line-over-config precedence.
+`--snapshot FILE` and `--snapshot-progress VALUE` are private test hooks.
 
 Contact information
 -------------------

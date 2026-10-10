@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.pdfcube.pdfcube</id>
+  <name>PDFCube</name>
+  <summary>Present PDF slides with animated 3D transitions</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <developer id="org.pdfcube">
+    <name>PDFCube contributors</name>
+  </developer>
+  <description>
+    <p>PDFCube is a focused PDF presentation viewer with cube transitions,
+    programmed slide timing, and keyboard-controlled zoom regions.</p>
+  </description>
+  <url type="homepage">https://github.com/baol/pdfcube</url>
+  <launchable type="desktop-id">pdfcube.desktop</launchable>
+  <provides>
+    <binary>pdfcube</binary>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-10-09" />
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

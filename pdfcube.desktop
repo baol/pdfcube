@@ -1,11 +1,12 @@
 [Desktop Entry]
-Name=PDFCube Presentation Viewer
-Name[it]=Visualizzatore di presentazione PDFCube
+Name=PDFCube
+Comment=Present PDF slides with animated 3D transitions
 TryExec=pdfcube
-Exec=pdfcube %U
+Exec=pdfcube %f
 StartupNotify=true
 Terminal=false
 Type=Application
-Icon=pdfcube
-Categories=GNOME;GTK;Graphics;VectorGraphics;Viewer;
-MimeType=application/pdf
+Icon=org.pdfcube.pdfcube
+Categories=Office;Presentation;
+MimeType=application/pdf;
+Keywords=PDF;presentation;slides;OpenGL;

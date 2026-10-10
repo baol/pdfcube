@@ -1,15 +1,26 @@
 Source: pdfcube
-Section: unknown
-Priority: extra
+Section: graphics
+Priority: optional
 Maintainer: mirko <mirko.maischberger@gmail.com>
-Build-Depends: debhelper (>= 5), autotools-dev
-Standards-Version: 3.7.2
+Build-Depends:
+ debhelper-compat (= 13),
+ meson,
+ ninja-build,
+ python3,
+ xvfb,
+ xauth,
+ libgtk-4-dev,
+ libepoxy-dev,
+ libpoppler-glib-dev,
+ libcairo2-dev,
+ libboost-program-options-dev
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/baol/pdfcube
 
 Package: pdfcube
-Architecture: i386
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: PDF on a cube to add some special effects to your projected presentations
- PDF Cube renders PDF presentations with special 3D effects (the
- omnipresent rotating cube and 5 predefined zoom animations). It adds
- eye-candy to your PDF presentations, even Latex, Beamer and Prosper
- ones. Needs OpenGL/DRI. Tested on Radeon 9250 and GPL xorg drivers.
+Description: PDF presentation viewer with animated 3D transitions
+ PDFCube renders PDF presentations with shader-based OpenGL cube transitions,
+ programmed slide timing, and keyboard-controlled zoom regions.
