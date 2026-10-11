@@ -1,0 +1,12 @@
+PDFCube 0.1.0 (2026-10-11)
+==========================
+
+- Ported the application from GtkGLExt to GTK 4 GtkGLArea.
+- Replaced fixed-function OpenGL with a shader-based OpenGL 3.3 renderer.
+- Split command-line parsing, PDF loading, application state, and rendering
+  into focused C++20 modules.
+- Preserved cube and plain transitions, programmed timing, zoom regions,
+  fullscreen and demo modes, keyboard navigation, and configuration files.
+- Added Meson, deterministic CLI and rendering tests, sanitizer CI, modern
+  desktop/AppStream metadata, and updated Debian packaging.
+- Removed the obsolete Autotools and GtkGLExt implementation.

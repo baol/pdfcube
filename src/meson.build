@@ -10,6 +10,7 @@ pdfcube_exe = executable(
   'pdfcube',
   pdfcube_sources,
   dependencies: [gtk, poppler, cairo, epoxy, boost],
+  include_directories: include_directories('..'),
   install: true,
 )
 

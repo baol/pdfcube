@@ -1,5 +1,7 @@
 #include "options.hpp"
 
+#include "pdfcube-config.hpp"
+
 #include <boost/program_options.hpp>
 
 #include <algorithm>
@@ -35,7 +37,7 @@ Color parse_color(const std::string& value) {
 
 std::string help_text(const po::options_description& visible) {
   std::ostringstream output;
-  output << "\npdfcube 0.1.0\n"
+  output << "\npdfcube " PDFCUBE_VERSION "\n"
          << "=============\n"
          << "PDF presentation viewer with 3D transitions\n\n"
          << visible << "\n"
@@ -114,7 +116,7 @@ ParseResult parse_options(int argc, char** argv) {
     }
     if (command_values.contains("version")) {
       result.should_exit = true;
-      result.output = "pdfcube 0.1.0\n";
+      result.output = "pdfcube " PDFCUBE_VERSION "\n";
       return result;
     }
     if (const auto* selected = value("no-fullscreen")) {

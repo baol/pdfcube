@@ -32,6 +32,7 @@ class Application {
   void choose_file();
   void open_document(const std::string& filename);
   void configure_program();
+  void jump_to_section(int section);
   void start_page_change(int delta, bool cube);
   void start_zoom(float x, float y, float zoom);
   void reset_zoom();

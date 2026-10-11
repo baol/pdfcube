@@ -15,11 +15,22 @@ jobs:
           sudo apt-get install -y \
             build-essential meson ninja-build python3 xvfb xauth mesa-utils \
             libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
-            libboost-program-options-dev
+            libboost-program-options-dev appstream desktop-file-utils \
+            debhelper lintian
       - name: Configure
         run: meson setup build -Db_sanitize=address,undefined
       - name: Build
         run: meson compile -C build
       - name: Test
         run: meson test -C build --print-errorlogs
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate org.pdfcube.pdfcube.desktop
+          appstreamcli validate --pedantic --no-net org.pdfcube.pdfcube.metainfo.xml
+      - name: Build source archive
+        run: meson dist -C build
+      - name: Build Debian package
+        run: dpkg-buildpackage -us -uc -b
+      - name: Lint Debian package
+        run: lintian ../pdfcube_*.changes
 

@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 binary = pathlib.Path(sys.argv[1])
+expected_version = sys.argv[2]
 
 def run(*arguments, home=None):
     environment = None
@@ -21,7 +22,7 @@ for option in ("--bgcolor", "--top-color", "--demo", "--program", "--no-fullscre
 
 version = run("--version")
 assert version.returncode == 0
-assert version.stdout == "pdfcube 0.1.0\n"
+assert version.stdout == f"pdfcube {expected_version}\n"
 
 for arguments in (("--unknown",), ("--bgcolor", "1:2"), ("--top-color", "2:0:0")):
     invalid = run(*arguments)

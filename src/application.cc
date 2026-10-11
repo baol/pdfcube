@@ -277,6 +277,18 @@ void Application::start_zoom(float x, float y, float zoom) {
 
 void Application::reset_zoom() { start_zoom(0.0F, 0.0F, 1.0F); }
 
+void Application::jump_to_section(int section) {
+  if (!document_ || transition_ != Transition::none) return;
+  for (int page = 0; page < document_->page_count(); ++page) {
+    if (cube_transitions_[static_cast<std::size_t>(page)] && --section == 0) {
+      current_page_ = page;
+      next_page_ = page;
+      gtk_gl_area_queue_render(GTK_GL_AREA(area_));
+      return;
+    }
+  }
+}
+
 gboolean Application::key_callback(GtkEventControllerKey*, guint keyval, guint,
                                    GdkModifierType state, gpointer data) {
   return static_cast<Application*>(data)->handle_key(keyval, state);
@@ -298,9 +310,7 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
       return true;
     }
     if (keyval >= GDK_KEY_1 && keyval <= GDK_KEY_9 && document_) {
-      current_page_ = std::min(document_->page_count() - 1,
-                               static_cast<int>(keyval - GDK_KEY_1 + 1));
-      gtk_gl_area_queue_render(GTK_GL_AREA(area_));
+      jump_to_section(static_cast<int>(keyval - GDK_KEY_1 + 1));
       return true;
     }
   }
@@ -341,9 +351,12 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
       return true;
     default:
       if (keyval >= GDK_KEY_1 && keyval <= GDK_KEY_9 && document_) {
-        current_page_ = std::min(document_->page_count() - 1,
-                                 static_cast<int>(keyval - GDK_KEY_1) * 5);
-        gtk_gl_area_queue_render(GTK_GL_AREA(area_));
+        const int destination = static_cast<int>(keyval - GDK_KEY_1) * 5;
+        if (transition_ == Transition::none && destination < document_->page_count()) {
+          current_page_ = destination;
+          next_page_ = destination;
+          gtk_gl_area_queue_render(GTK_GL_AREA(area_));
+        }
         return true;
       }
       return false;

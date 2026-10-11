@@ -1,135 +1,113 @@
-.TH "\fBpdfcube\fR"  "1" "10/2026" "pdfcube 0.1.0" "pdfcube presentation viewer"
-.SH "NAME"
-\fBpdfcube\fP - a PDF presentation viewer with 3D effects.
-.SH "SYNOPSIS"
-.HP 24
-\fBpdfcube\fP [\fIFILE\fP] [\fB--help\fP] [\fB--bgcolor\fP \fIf:f:f\fP] \
-[\fB--top-color\fP \fIf:f:f\fP] [\fB--no-fullscreen\fP] [\fB--demo\fP] \
-[\fB--program\fP \fIn:x:n:x:...\fP] 
-.SH "DESCRIPTION"
+.TH PDFCUBE 1 "October 2026" "pdfcube 0.1.0" "PDFCube Manual"
+.SH NAME
+pdfcube \- present PDF slides with animated 3D transitions
+.SH SYNOPSIS
+.B pdfcube
+.RI [ options ]
+.RI [ presentation.pdf ]
+.SH DESCRIPTION
+.B pdfcube
+is a focused PDF presentation viewer with animated cube transitions,
+programmed slide timing, and keyboard-controlled zoom regions. Pages are
+rendered with Poppler and Cairo and displayed through GTK 4 and OpenGL.
 .PP
-\fBpdfcube\fP(1) is a tiny (about 30KiB) viewer for Portable Document
-Format (PDF) files that adds spinning cube transition effect to your
-PDF presentation files. It can also zoom on 5 predefined areas with a
-smooth zooming effect. This program is suited only for landscape PDF
-files, mostly presentations done with LaTeX (Beamer, Prosper, etc.) or
-OpenOffice.org Impress.
-.PP
-If FILE is not given a file\-open dialog box is shown to the user.
-.PP
-\fBpdfcube\fP(1) is an open source, low-effort, spare-time, money-less
-project. Your help is welcome!
-.SH "OPTIONS"
+If no PDF file is supplied, a file chooser is displayed.
+.SH OPTIONS
 .TP
-\fB\-h\fR [ \fB\-\-help\fR ]
-This help message.
+.BR \-h ", " \-\-help
+Display command-line help and exit.
 .TP
-\fB\-v\fR [ \fB\-\-version\fR ]
-Version information
+.BR \-v ", " \-\-version
+Display the PDFCube version and exit.
 .TP
-\fB\-b\fR [ \fB\-\-bgcolor\fR ] arg
-Background color is 'r:g:b' with real values between
-0.0 and 1.0, no spaces.
+.BR \-b ", " \-\-bgcolor " " r:g:b"
+Set the background color. Each component is a number from 0.0 to 1.0.
 .TP
-\fB\-t\fR [ \fB\-\-top\-color\fR ] arg
-Cube top color in 'r:g:b' format again with reals in
-[0,1].
+.BR \-t ", " \-\-top-color " " r:g:b"
+Set the cube cap color. Each component is a number from 0.0 to 1.0.
 .TP
-\fB\-n\fR [ \fB\-\-no\-fullscreen\fR ]
-Don't activate full\-screen mode by default.
+.BR \-n ", " \-\-no-fullscreen
+Start in a window instead of fullscreen mode.
 .TP
-\fB\-\-demo\fR Automatically auto-advance presentation based on the
-frame duration PDF attribute (\\transduration when using Latex Beamer)
-or the specified program (see the \-\-program option).
+.B \-\-demo
+Automatically advance slides using PDF transition durations or the program
+specified with
+.BR \-\-program .
 .TP
-\fB\-\-program\fR A program in the form
-n:x:n:x:n:x... where n are durations in seconds and "x" can be either
-"c" for cube transition and "p" for plain
-transition. (e.g. \-\-program 5:c:3:p). The last program is used for
-all remaining slides.
-.PP
-.SS Notes
-The first (and only) non\-option string is treated as the input file.
-.SH "INTERACTIVE CONTROL"
+.BI \-\-program " n:x:n:x:..."
+Set slide durations and following transition types. Durations are in seconds;
+.B c
+selects a cube transition and
+.B p
+selects a plain transition. The last pair is repeated for remaining slides.
+For example,
+.B \-\-program 5:c:3:p
+uses five seconds followed by a cube, then three seconds followed by a plain
+transition.
+.SH INTERACTIVE CONTROLS
 .TP
-\fBc, a\fP
-Will display the next/previous page with a cube transition effect.
+.B Space, Page Down
+Advance using the programmed transition.
 .TP
-\fBSPACE, PG-DOWN\fP
-Will switch to the next page with the programmed effect.
+.B c, a
+Move forward or backward with a cube transition.
 .TP
-\fBh, j, k, l, z\fP
-Will zoom into the predefined areas.
+.B Right, Left, Page Up
+Move forward or backward without animation.
 .TP
-\fBg\fP
-Will undo any zoom.
+.B h, j, k, l, z
+Zoom into predefined regions.
 .TP
-\fBESC, Ctrl-q\fP
-Will exit pdfcube immediately.
+.B g
+Reset the zoom.
 .TP
-\fBPG-UP, Left-Arrow\fP
-Will quick-switch to the previous page.
+.B f
+Toggle fullscreen mode.
 .TP
-\fBRight-Arrow\fP
-Will quick-switch to the next page.
+.B t
+Toggle automatic advancement.
 .TP
-\fBf\fP
-Will toggle full\-screen mode.
+.B 1 through 9
+Jump to page 5*(n-1).
 .TP
-\fBt\fP
-Will toggle auto-advance (demo) mode.
+.B Ctrl-1 through Ctrl-9
+Jump to the corresponding programmed cube transition.
 .TP
-\fBCtrl-l\fP
-Will redraw the screen.
+.B Ctrl-l
+Reload the OpenGL resources and redraw.
 .TP
-\fBCtrl-1, Ctrl-2, ..., Ctrl-9\fP
-Will jump to the page corresponding to the n-th programmed transition (if any).
-.TP
-\fB1, 2, ..., 9\fP
-Will jump to page 5*(n-1).
-.SH "CONFIGURATION FILE"
-.PP
-If the \fI~/.pdfcuberc\fP file exists, it is used as a configuration
-file. The configuration file uses the same options as the command line
-(using the boost program options syntax). e.g.
+.B Escape, Ctrl-q
+Quit.
+.SH CONFIGURATION
+Options may be placed in
+.IR ~/.pdfcuberc
+using Boost Program Options syntax. Command-line options take precedence.
+For example:
 .PP
 .RS
-.br
+.nf
 demo=true
-.br
 bgcolor=0:0:0
-.br
 program=5:p
+.fi
 .RE
-.SH "EXAMPLES"
+.SH EXAMPLES
 .TP
-\fBpdfcube\fP foo.pdf
-Will display 'foo.pdf' in full-screen.
+.B pdfcube slides.pdf
+Present a PDF in fullscreen mode.
 .TP
-\fBpdfcube\fP --demo --program 5:c foo.pdf
-Will display 'foo.pdf' in full-screen and will do a cube transition
-every 5 seconds.
+.B pdfcube --demo --program 5:c slides.pdf
+Advance every five seconds with cube transitions.
 .TP
-\fBpdfcube\fP foo.pdf \fB--bgcolor\fP 0:0:0 \fB--top-color\fP 0.6:0.2:0.2
-Will display 'foo.pdf' with custom background and cube color.
-.SH "BUGS"
-.PP
-On some systems color values are locale dependent (e.g. you may have
-to write 0,6 instead of 0.6)
-.PP
-See http://code.100allora.it/pdfcube/report/ for the bugtracker of
-\fBpdfcube\fP(1) (you should obtain an account contacting the author
-first). Or please report any bug to the author.
-.SH "AUTHORS"
-Written by Mirko Maischberger <mailto:mirko.maischberger@gmail.com>
-and Karol Sokolowsky <sokoow@gmail.com>
-.SH "RESOURCES"
-Main web site: http://code.100allora.it/pdfcube/
-.SH "THANKS"
-I'd like to thank the LILiK laboratory in Florence, Italy for having
-teached me the value of open-source and open-culture.
-.SH "COPYING"
-This manpage is available under the same GPL v2 or later license as
-the main program, the original manpage was written by Alexander Wirt
-<mailto:formorer@debian.org> for the Debian distribution. The 0.0.5
-version is Copyright (C) 2008-2012 Mirko Maischberger.
+.B pdfcube --no-fullscreen --bgcolor 0:0:0 slides.pdf
+Present in a window with a black background.
+.SH REPORTING BUGS
+Report issues at
+.UR https://github.com/baol/pdfcube/issues
+.UE .
+.SH AUTHORS
+PDFCube was written by Mirko Maischberger and Karol Sokolowski, with later
+contributions recorded in the Git history.
+.SH COPYRIGHT
+Copyright 2006-2026 PDFCube contributors. PDFCube is licensed under the GNU
+General Public License, version 2 or later.

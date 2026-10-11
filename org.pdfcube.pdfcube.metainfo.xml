@@ -13,12 +13,17 @@
     programmed slide timing, and keyboard-controlled zoom regions.</p>
   </description>
   <url type="homepage">https://github.com/baol/pdfcube</url>
-  <launchable type="desktop-id">pdfcube.desktop</launchable>
+  <launchable type="desktop-id">org.pdfcube.pdfcube.desktop</launchable>
   <provides>
     <binary>pdfcube</binary>
   </provides>
   <releases>
-    <release version="0.1.0" date="2026-10-09" />
+    <release version="0.1.0" date="2026-10-11">
+      <description>
+        <p>Port to GTK 4 and shader-based OpenGL, with a Meson build and
+        automated compatibility tests.</p>
+      </description>
+    </release>
   </releases>
   <content_rating type="oars-1.1" />
 </component>

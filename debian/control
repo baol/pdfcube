@@ -1,7 +1,7 @@
 Source: pdfcube
 Section: graphics
 Priority: optional
-Maintainer: mirko <mirko.maischberger@gmail.com>
+Maintainer: Mirko Maischberger <mirko.maischberger@gmail.com>
 Build-Depends:
  debhelper-compat (= 13),
  meson,
@@ -17,6 +17,8 @@ Build-Depends:
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 Homepage: https://github.com/baol/pdfcube
+Vcs-Browser: https://github.com/baol/pdfcube
+Vcs-Git: https://github.com/baol/pdfcube.git
 
 Package: pdfcube
 Architecture: any
