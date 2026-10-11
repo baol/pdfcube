@@ -40,6 +40,7 @@ Application::Application(Options options) : options_(std::move(options)) {}
 
 int Application::run() {
   application_ = gtk_application_new("org.pdfcube.pdfcube", G_APPLICATION_DEFAULT_FLAGS);
+  g_application_set_resource_base_path(G_APPLICATION(application_), "/org/pdfcube/pdfcube");
   g_signal_connect(application_, "activate", G_CALLBACK(activate_callback), this);
   char name[] = "pdfcube";
   char* arguments[] = {name, nullptr};
