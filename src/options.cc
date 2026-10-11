@@ -70,7 +70,7 @@ ParseResult parse_options(int argc, char** argv) {
 
   po::options_description hidden("Hidden options");
   hidden.add_options()
-      ("input-file", po::value<std::string>(), "PDF file")
+      ("input-file,i", po::value<std::string>(), "PDF file")
       ("snapshot", po::value<std::string>(), "Write one PNG frame and exit")
       ("snapshot-progress", po::value<double>(),
        "Transition progress used by --snapshot");

@@ -5,7 +5,11 @@
 
 #include <epoxy/gl.h>
 
+#include <condition_variable>
+#include <deque>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace pdfcube {
@@ -36,9 +40,28 @@ class Renderer {
   void write_png(const std::string& filename, int width, int height) const;
 
  private:
+  struct PageTexture {
+    GLuint name{0};
+    int maximum_size{0};
+  };
+
+  struct PreparedPage {
+    Surface surface;
+    int maximum_size{0};
+    int requested_size{0};
+  };
+
+  struct RenderRequest {
+    int page;
+    int maximum_size;
+  };
+
   GLuint compile_shader(GLenum type, const char* source);
-  GLuint texture_for_page(int page);
-  void draw_page(int page, const float* matrix);
+  GLuint texture_for_page(int page, int maximum_size);
+  void schedule_page(int page, int maximum_size);
+  void render_pages_in_background();
+  void preload_neighbors(int page, int maximum_size);
+  void draw_page(int page, int maximum_size, const float* matrix);
   void draw_color(const Color& color, const float* matrix);
 
   Document& document_;
@@ -51,7 +74,15 @@ class Renderer {
   GLint texture_uniform_{-1};
   GLint color_uniform_{-1};
   GLint textured_uniform_{-1};
-  std::vector<GLuint> textures_;
+  GLint maximum_texture_size_{0};
+  std::vector<PageTexture> textures_;
+  std::vector<PreparedPage> prepared_pages_;
+  std::deque<RenderRequest> render_requests_;
+  std::mutex prepared_mutex_;
+  std::mutex document_render_mutex_;
+  std::condition_variable prepared_condition_;
+  std::thread render_thread_;
+  bool stop_render_thread_{false};
 };
 
 }  // namespace pdfcube

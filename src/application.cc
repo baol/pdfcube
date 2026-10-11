@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "navigation.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -10,7 +11,7 @@ namespace pdfcube {
 namespace {
 
 constexpr gint64 transition_duration_us = 750'000;
-constexpr gint64 zoom_duration_us = 500'000;
+constexpr gint64 zoom_duration_us = 750'000;
 
 int wrap_page(int page, int count) {
   const int wrapped = page % count;
@@ -133,7 +134,7 @@ void Application::open_document(const std::string& filename) {
       transition_started_ = g_get_monotonic_time();
     }
     gtk_gl_area_queue_render(GTK_GL_AREA(area_));
-    if (options_.demo) schedule_auto_advance();
+    if (options_.demo) schedule_auto_advance(true);
   } catch (const std::exception& error) {
     startup_error_ = error.what();
     g_application_quit(G_APPLICATION(application_));
@@ -200,8 +201,9 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
           *self->document_, self->options_.background, self->options_.top);
       self->renderer_->initialize();
     }
-    const int width = gtk_widget_get_width(GTK_WIDGET(area));
-    const int height = gtk_widget_get_height(GTK_WIDGET(area));
+    const int scale = gtk_widget_get_scale_factor(GTK_WIDGET(area));
+    const int width = gtk_widget_get_width(GTK_WIDGET(area)) * scale;
+    const int height = gtk_widget_get_height(GTK_WIDGET(area)) * scale;
     const FrameState state = self->frame_state();
     self->renderer_->render(width, height, state);
     if (!self->options_.snapshot.empty() && !self->snapshot_written_) {
@@ -229,7 +231,7 @@ FrameState Application::frame_state() const {
   state.current_page = current_page_;
   state.next_page = next_page_;
   state.transition = transition_;
-  state.progress = eased(animation_progress());
+  state.progress = animation_progress();
   if (zoom_animating_) {
     const double progress = eased(std::clamp(
         (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us), 0.0, 1.0));
@@ -246,10 +248,12 @@ FrameState Application::frame_state() const {
 
 gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock*, gpointer data) {
   auto* self = static_cast<Application*>(data);
+  bool settled_transition = false;
   if (self->transition_ != Transition::none && self->animation_progress() >= 1.0 &&
       self->options_.snapshot.empty()) {
     self->current_page_ = self->next_page_;
     self->transition_ = Transition::none;
+    settled_transition = true;
     if (self->options_.demo) self->schedule_auto_advance();
   }
   if (self->zoom_animating_ && g_get_monotonic_time() - self->zoom_started_ >= zoom_duration_us) {
@@ -258,14 +262,14 @@ gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock*, gpointer 
     self->offset_y_ = self->y_to_;
     self->zoom_animating_ = false;
   }
-  if (self->transition_ != Transition::none || self->zoom_animating_) {
+  if (settled_transition || self->transition_ != Transition::none || self->zoom_animating_) {
     gtk_gl_area_queue_render(GTK_GL_AREA(widget));
   }
   return G_SOURCE_CONTINUE;
 }
 
 void Application::start_page_change(int delta, bool cube) {
-  if (!document_ || transition_ != Transition::none) return;
+  if (!document_ || busy()) return;
   next_page_ = wrap_page(current_page_ + delta, document_->page_count());
   transition_ = cube ? (delta > 0 ? Transition::cube_forward : Transition::cube_backward)
                      : Transition::switch_page;
@@ -278,7 +282,7 @@ void Application::start_page_change(int delta, bool cube) {
 }
 
 void Application::start_zoom(float x, float y, float zoom) {
-  if (transition_ != Transition::none) return;
+  if (busy()) return;
   const FrameState current = frame_state();
   zoom_from_ = current.zoom;
   x_from_ = current.offset_x;
@@ -290,10 +294,22 @@ void Application::start_zoom(float x, float y, float zoom) {
   zoom_animating_ = true;
 }
 
-void Application::reset_zoom() { start_zoom(0.0F, 0.0F, 1.0F); }
+void Application::toggle_zoom(float x, float y, float zoom) {
+  if (busy()) return;
+  if (std::abs(zoom_ - 1.0F) > 0.001F) reset_zoom();
+  else start_zoom(x, y, zoom);
+}
+
+void Application::reset_zoom() {
+  if (!busy() && std::abs(zoom_ - 1.0F) > 0.001F) start_zoom(0.0F, 0.0F, 1.0F);
+}
+
+bool Application::busy() const {
+  return transition_ != Transition::none || zoom_animating_;
+}
 
 void Application::jump_to_section(int section) {
-  if (!document_ || transition_ != Transition::none) return;
+  if (!document_ || busy()) return;
   for (int page = 0; page < document_->page_count(); ++page) {
     if (cube_transitions_[static_cast<std::size_t>(page)] && --section == 0) {
       current_page_ = page;
@@ -316,16 +332,28 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
       return true;
     }
     if (keyval == GDK_KEY_l) {
+      zoom_ = zoom_from_ = zoom_to_ = 1.0F;
+      offset_x_ = offset_y_ = x_from_ = x_to_ = y_from_ = y_to_ = 0.0F;
+      zoom_animating_ = false;
       if (renderer_) {
         reload_renderer_ = true;
         gtk_gl_area_queue_render(GTK_GL_AREA(area_));
       }
       return true;
     }
-    if (keyval >= GDK_KEY_1 && keyval <= GDK_KEY_9 && document_) {
-      jump_to_section(static_cast<int>(keyval - GDK_KEY_1 + 1));
-      return true;
+  }
+
+  if (keyval >= GDK_KEY_1 && keyval <= GDK_KEY_9 && document_) {
+    const NumberJump jump = number_jump(
+        static_cast<int>(keyval - GDK_KEY_1 + 1), (state & GDK_CONTROL_MASK) != 0);
+    if (jump.kind == NumberJumpKind::cube_section) {
+      jump_to_section(jump.number);
+    } else if (!busy() && jump.number < document_->page_count()) {
+      current_page_ = jump.number;
+      next_page_ = jump.number;
+      gtk_gl_area_queue_render(GTK_GL_AREA(area_));
     }
+    return true;
   }
 
   switch (keyval) {
@@ -345,41 +373,36 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
       return true;
     }
     case GDK_KEY_g: reset_zoom(); return true;
-    case GDK_KEY_h: start_zoom(0.45F, -0.35F, 2.0F); return true;
-    case GDK_KEY_j: start_zoom(-0.45F, -0.35F, 2.0F); return true;
-    case GDK_KEY_k: start_zoom(0.45F, 0.35F, 2.0F); return true;
-    case GDK_KEY_l: start_zoom(-0.45F, 0.35F, 2.0F); return true;
-    case GDK_KEY_z: start_zoom(0.0F, 0.1F, 1.5F); return true;
+    case GDK_KEY_h: toggle_zoom(0.45F, -0.35F, 2.0F); return true;
+    case GDK_KEY_j: toggle_zoom(-0.45F, -0.35F, 2.0F); return true;
+    case GDK_KEY_k: toggle_zoom(0.45F, 0.35F, 2.0F); return true;
+    case GDK_KEY_l: toggle_zoom(-0.45F, 0.35F, 2.0F); return true;
+    case GDK_KEY_z: toggle_zoom(0.0F, 0.1F, 1.5F); return true;
     case GDK_KEY_f:
       if (gtk_window_is_fullscreen(GTK_WINDOW(window_))) gtk_window_unfullscreen(GTK_WINDOW(window_));
       else gtk_window_fullscreen(GTK_WINDOW(window_));
       return true;
     case GDK_KEY_t:
+      if (busy()) return true;
       options_.demo = !options_.demo;
-      if (options_.demo) schedule_auto_advance();
+      if (options_.demo) schedule_auto_advance(true);
       else if (auto_advance_source_ != 0) {
         g_source_remove(auto_advance_source_);
         auto_advance_source_ = 0;
       }
       return true;
-    default:
-      if (keyval >= GDK_KEY_1 && keyval <= GDK_KEY_9 && document_) {
-        const int destination = static_cast<int>(keyval - GDK_KEY_1) * 5;
-        if (transition_ == Transition::none && destination < document_->page_count()) {
-          current_page_ = destination;
-          next_page_ = destination;
-          gtk_gl_area_queue_render(GTK_GL_AREA(area_));
-        }
-        return true;
-      }
-      return false;
+    default: return false;
   }
 }
 
-void Application::schedule_auto_advance() {
+void Application::schedule_auto_advance(bool allow_immediate) {
   if (!document_ || !options_.demo) return;
   if (auto_advance_source_ != 0) g_source_remove(auto_advance_source_);
-  const int delay = std::max(1000, durations_[static_cast<std::size_t>(current_page_)]);
+  const int delay = durations_[static_cast<std::size_t>(current_page_)];
+  if (delay <= 0) {
+    auto_advance_source_ = allow_immediate ? g_idle_add(auto_advance_callback, this) : 0;
+    return;
+  }
   auto_advance_source_ = g_timeout_add(delay, auto_advance_callback, this);
 }
 
@@ -389,6 +412,9 @@ gboolean Application::auto_advance_callback(gpointer data) {
   if (!self->document_) return G_SOURCE_REMOVE;
   const int destination = wrap_page(self->current_page_ + 1, self->document_->page_count());
   self->start_page_change(1, self->cube_transitions_[static_cast<std::size_t>(destination)]);
+  if (self->transition_ == Transition::none && self->options_.demo) {
+    self->schedule_auto_advance();
+  }
   return G_SOURCE_REMOVE;
 }
 

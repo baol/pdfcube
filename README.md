@@ -84,7 +84,9 @@ be stored in `~/.pdfcuberc`; command-line values take precedence.
 Common controls include Space or Page Down to advance, `c`/`a` for forward
 and backward cube transitions, arrow keys for plain navigation, `h`/`j`/`k`/
 `l`/`z` for zoom regions, `g` to reset zoom, `f` for fullscreen, and Escape
-or Ctrl-Q to quit. See `man pdfcube` for the full list.
+or Ctrl-Q to quit. Number keys `1`–`9` jump to pages 1, 6, 11, and so on;
+the separate `Ctrl-1`–`Ctrl-9` bindings jump to the corresponding cube
+section. See `man pdfcube` for the full list.
 
 ## Tests
 

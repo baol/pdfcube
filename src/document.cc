@@ -66,7 +66,7 @@ const PageInfo& Document::page_info(int page) const {
 Surface Document::render_page(int page_number, int maximum_size) const {
   PopplerPage* page = poppler_document_get_page(document_, page_number);
   const PageInfo& info = page_info(page_number);
-  const double scale = std::min(1.0, maximum_size / std::max(info.width, info.height));
+  const double scale = std::max(1, maximum_size) / std::max(info.width, info.height);
   const int width = std::max(1, static_cast<int>(std::ceil(info.width * scale)));
   const int height = std::max(1, static_cast<int>(std::ceil(info.height * scale)));
   Surface surface(cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height));

@@ -35,11 +35,13 @@ class Application {
   void jump_to_section(int section);
   void start_page_change(int delta, bool cube);
   void start_zoom(float x, float y, float zoom);
+  void toggle_zoom(float x, float y, float zoom);
   void reset_zoom();
-  void schedule_auto_advance();
+  void schedule_auto_advance(bool allow_immediate = false);
   FrameState frame_state() const;
   bool handle_key(guint keyval, GdkModifierType state);
   double animation_progress() const;
+  bool busy() const;
 
   Options options_;
   GtkApplication* application_{nullptr};

@@ -31,7 +31,7 @@ class Document {
 
   [[nodiscard]] int page_count() const;
   [[nodiscard]] const PageInfo& page_info(int page) const;
-  [[nodiscard]] Surface render_page(int page, int maximum_size = 2048) const;
+  [[nodiscard]] Surface render_page(int page, int maximum_size) const;
 
  private:
   PopplerDocument* document_{nullptr};

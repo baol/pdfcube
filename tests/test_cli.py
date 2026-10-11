@@ -24,6 +24,25 @@ version = run("--version")
 assert version.returncode == 0
 assert version.stdout == f"pdfcube {expected_version}\n"
 
+short_help = run("-h")
+assert short_help.returncode == 0
+assert short_help.stdout == help_result.stdout
+
+short_version = run("-v")
+assert short_version.returncode == 0
+assert short_version.stdout == version.stdout
+
+for arguments in (
+    ("-b", "0:0:0", "--help"),
+    ("-t", "0.7:0.6:0.6", "--help"),
+    ("-n", "--help"),
+):
+    short_option = run(*arguments)
+    assert short_option.returncode == 0, (arguments, short_option.stderr)
+
+short_input = run("-i", "unused.pdf", "--help")
+assert short_input.returncode == 0, short_input.stderr
+
 for arguments in (("--unknown",), ("--bgcolor", "1:2"), ("--top-color", "2:0:0")):
     invalid = run(*arguments)
     assert invalid.returncode == 2, (arguments, invalid.returncode, invalid.stderr)
