@@ -86,7 +86,11 @@ and backward cube transitions, arrow keys for plain navigation, `h`/`j`/`k`/
 `l`/`z` for zoom regions, `g` to reset zoom, `f` for fullscreen, and Escape
 or Ctrl-Q to quit. Number keys `1`–`9` jump to pages 1, 6, 11, and so on;
 the separate `Ctrl-1`–`Ctrl-9` bindings jump to the corresponding cube
-section. See `man pdfcube` for the full list.
+section. Zoom keys `h`, `j`, `k`, and `l` focus the upper-left,
+upper-right, lower-left, and lower-right regions; `z` focuses slightly below
+the page center. They retain the original framing and 750 ms camera motion.
+Any zoom key while zoomed in (or `g`) returns to the full page.
+See `man pdfcube` for the full list.
 
 ## Tests
 

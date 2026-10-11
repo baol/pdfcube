@@ -3,6 +3,7 @@
 #include "document.hpp"
 #include "options.hpp"
 #include "renderer.hpp"
+#include "zoom.hpp"
 
 #include <gtk/gtk.h>
 
@@ -34,8 +35,7 @@ class Application {
   void configure_program();
   void jump_to_section(int section);
   void start_page_change(int delta, bool cube);
-  void start_zoom(float x, float y, float zoom);
-  void toggle_zoom(float x, float y, float zoom);
+  void toggle_zoom(ZoomRegion region);
   void reset_zoom();
   void schedule_auto_advance(bool allow_immediate = false);
   FrameState frame_state() const;
@@ -55,16 +55,10 @@ class Application {
   int next_page_{0};
   Transition transition_{Transition::none};
   gint64 transition_started_{0};
-  float zoom_{1.0F};
-  float offset_x_{0.0F};
-  float offset_y_{0.0F};
-  float zoom_from_{1.0F};
-  float zoom_to_{1.0F};
-  float x_from_{0.0F};
-  float x_to_{0.0F};
-  float y_from_{0.0F};
-  float y_to_{0.0F};
+  ZoomRegion zoom_region_{ZoomRegion::none};
+  bool zoom_reversing_{false};
   bool zoom_animating_{false};
+  bool zoom_preparing_{false};
   gint64 zoom_started_{0};
   guint auto_advance_source_{0};
   bool reload_renderer_{false};
