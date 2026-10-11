@@ -18,7 +18,7 @@
     <binary>pdfcube</binary>
   </provides>
   <releases>
-    <release version="0.1.0" date="2026-10-11">
+    <release version="@VERSION@" date="2026-10-11">
       <description>
         <p>Port to GTK 4 and shader-based OpenGL, with a Meson build and
         automated compatibility tests.</p>

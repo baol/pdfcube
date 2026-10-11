@@ -7,10 +7,10 @@ transitions, programmed slide timing, and keyboard-controlled zoom regions.
 It is especially useful for slide decks produced by LaTeX Beamer and office
 suites.
 
-PDFCube 0.1.0 is a complete modernization of the original application. It
-uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3, libepoxy, Poppler
-GLib, Cairo, Boost Program Options, and Meson. The obsolete GtkGLExt,
-fixed-function OpenGL, and Autotools implementation has been removed.
+The current PDFCube release is a complete modernization of the original
+application. It uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3,
+libepoxy, Poppler GLib, Cairo, Boost Program Options, and Meson. The obsolete
+GtkGLExt, fixed-function OpenGL, and Autotools implementation has been removed.
 
 ## Requirements
 
@@ -104,8 +104,12 @@ plain programs, configured colors, and command-line-over-config precedence.
 Meson can produce a tested source archive with:
 
 ```sh
-meson dist -C build
+meson dist -C build --formats gztar
 ```
+
+Pushing a signed `vMAJOR.MINOR.PATCH` tag runs the release workflow, which
+creates a GitHub Release containing the source archive, a Debian package built
+on the latest Ubuntu LTS runner, an x86-64 AppImage, and SHA-256 checksums.
 
 Debian packaging is maintained in `debian/`. Maintainers should follow
 [RELEASING.md](RELEASING.md) before creating a release tag.

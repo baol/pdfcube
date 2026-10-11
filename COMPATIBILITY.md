@@ -19,7 +19,7 @@ KDE, GNOME, and other desktop environments are not separate renderer targets;
 they are covered through GTK's X11 and Wayland backends. GPU and driver
 combinations are only considered verified after they appear in this matrix.
 
-## Out of scope for 0.1.0
+## Out of scope for the current release
 
 - OpenGL 2.x and OpenGL ES 2.x
 - Vulkan, Metal, and Direct3D renderers

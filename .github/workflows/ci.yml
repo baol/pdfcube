@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -27,18 +29,22 @@ jobs:
       - name: Validate desktop metadata
         run: |
           desktop-file-validate org.pdfcube.pdfcube.desktop
-          appstreamcli validate --pedantic --no-net org.pdfcube.pdfcube.metainfo.xml
+          appstreamcli validate --pedantic --no-net build/org.pdfcube.pdfcube.metainfo.xml
       - name: Build source archive
-        run: meson dist -C build
+        run: meson dist -C build --formats gztar
       - name: Build Debian package
-        run: dpkg-buildpackage -us -uc -b
+        run: |
+          sed -i '1s/ unstable;/ noble;/' debian/changelog
+          dpkg-buildpackage -us -uc -b
       - name: Lint Debian package
-        run: lintian ../pdfcube_*.changes
+        run: lintian --profile ubuntu ../pdfcube_*.changes
 
   macos:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install dependencies
         run: brew install meson ninja pkg-config gtk4 libepoxy poppler boost
       - name: Configure
@@ -55,6 +61,8 @@ jobs:
         shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64

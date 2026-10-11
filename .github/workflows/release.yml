@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release tag
+        id: version
+        shell: bash
+        run: |
+          version="$(python3 tools/version.py)"
+          test "v${version}" = "${GITHUB_REF_NAME}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install build and packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential meson ninja-build python3 xvfb xauth mesa-utils \
+            libgl1-mesa-dri \
+            libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
+            libboost-program-options-dev appstream desktop-file-utils \
+            debhelper lintian wget file
+
+      - name: Configure, build, and test
+        run: |
+          meson setup build --buildtype=release -Dwerror=true --prefix=/usr
+          meson compile -C build
+          meson test -C build --print-errorlogs
+          desktop-file-validate org.pdfcube.pdfcube.desktop
+          appstreamcli validate --pedantic --no-net build/org.pdfcube.pdfcube.metainfo.xml
+
+      - name: Build source archive
+        run: meson dist -C build --formats gztar
+
+      - name: Build Debian package
+        env:
+          PDFCUBE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ubuntu_codename="$(. /etc/os-release; echo "${VERSION_CODENAME}")"
+          sed -i -E \
+            "1s/\([^)]*\) unstable;/(${PDFCUBE_VERSION}-1ubuntu1) ${ubuntu_codename};/" \
+            debian/changelog
+          dpkg-buildpackage -us -uc -b
+          lintian --profile ubuntu ../pdfcube_*.changes
+
+      - name: Build AppImage
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+          DEPLOY_GTK_VERSION: '4'
+        run: |
+          DESTDIR="${PWD}/AppDir" meson install -C build
+          wget --https-only \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          wget --https-only \
+            https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/7a3fbc31a9e5075073ff8790f26effbac5f84453/linuxdeploy-plugin-gtk.sh
+          wget --https-only \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          wget --https-only \
+            https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          echo 'c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  linuxdeploy-x86_64.AppImage' | sha256sum -c -
+          echo 'b0f4cbc684a0103a9651f0955b635eaea0096b3a66c0f5a2c2aa337960375171  linuxdeploy-plugin-gtk.sh' | sha256sum -c -
+          echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool-x86_64.AppImage' | sha256sum -c -
+          echo '2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  runtime-x86_64' | sha256sum -c -
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh \
+            appimagetool-x86_64.AppImage
+          export PATH="${PWD}:${PATH}"
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir AppDir \
+            --desktop-file org.pdfcube.pdfcube.desktop \
+            --icon-file data/org.pdfcube.pdfcube.svg \
+            --plugin gtk
+          ./appimagetool-x86_64.AppImage --no-appstream --runtime-file runtime-x86_64 \
+            AppDir "pdfcube-${VERSION}-x86_64.AppImage"
+          xvfb-run -a ./pdfcube-${VERSION}-x86_64.AppImage \
+            --no-fullscreen --snapshot /tmp/pdfcube-appimage.png tests/fixture.pdf
+          test -s /tmp/pdfcube-appimage.png
+
+      - name: Collect release assets
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir release-assets
+          cp "build/meson-dist/pdfcube-${VERSION}.tar.gz" release-assets/
+          cp ../pdfcube_*_amd64.deb release-assets/
+          cp "pdfcube-${VERSION}-x86_64.AppImage" release-assets/
+          cd release-assets
+          sha256sum * > SHA256SUMS
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfcube-${{ steps.version.outputs.version }}
+          path: release-assets/
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: release-assets/*
