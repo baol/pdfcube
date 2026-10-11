@@ -18,6 +18,13 @@ navigation_test = executable(
 
 test('numeric navigation bindings', navigation_test)
 
+zoom_test = executable(
+  'zoom-test',
+  files('test_zoom.cc'),
+  include_directories: include_directories('../src'),
+)
+test('legacy zoom framing and animation', zoom_test)
+
 document_resolution_test = executable(
   'document-resolution-test',
   files('test_document.cc', '../src/document.cc'),

@@ -400,7 +400,8 @@ void Renderer::render(int width, int height, const FrameState& frame) {
   const int viewport_texture_size = std::max(viewport.width, viewport.height);
   const int texture_size = std::min(
       maximum_texture_size_,
-      viewport_texture_size * static_cast<int>(std::ceil(std::max(1.0F, frame.zoom))));
+      static_cast<int>(std::ceil(viewport_texture_size *
+                                std::max({1.0F, frame.zoom, frame.texture_zoom}))));
   const Matrix zoom = translate(frame.offset_x, frame.offset_y, 0.0F) *
                       scale(frame.zoom, frame.zoom, 1.0F);
 

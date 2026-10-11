@@ -22,6 +22,7 @@ struct FrameState {
   Transition transition{Transition::none};
   double progress{0.0};
   float zoom{1.0F};
+  float texture_zoom{1.0F};
   float offset_x{0.0F};
   float offset_y{0.0F};
 };

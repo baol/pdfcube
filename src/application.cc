@@ -18,11 +18,6 @@ int wrap_page(int page, int count) {
   return wrapped < 0 ? wrapped + count : wrapped;
 }
 
-double eased(double value) {
-  value = std::clamp(value, 0.0, 1.0);
-  return value * value * (3.0 - 2.0 * value);
-}
-
 void require_gl_context(GtkGLArea* area) {
   gtk_gl_area_make_current(area);
   if (GError* error = gtk_gl_area_get_error(area)) {
@@ -207,6 +202,11 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
     const int height = gtk_widget_get_height(GTK_WIDGET(area)) * scale;
     const FrameState state = self->frame_state();
     self->renderer_->render(width, height, state);
+    if (self->zoom_preparing_) {
+      // Start the clock only after the full zoom-resolution texture is ready.
+      self->zoom_started_ = g_get_monotonic_time();
+      self->zoom_preparing_ = false;
+    }
     if (!self->options_.snapshot.empty() && !self->snapshot_written_) {
       self->renderer_->write_png(self->options_.snapshot, width, height);
       self->snapshot_written_ = true;
@@ -233,17 +233,16 @@ FrameState Application::frame_state() const {
   state.next_page = next_page_;
   state.transition = transition_;
   state.progress = animation_progress();
-  if (zoom_animating_) {
-    const double progress = eased(std::clamp(
-        (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us), 0.0, 1.0));
-    state.zoom = zoom_from_ + (zoom_to_ - zoom_from_) * static_cast<float>(progress);
-    state.offset_x = x_from_ + (x_to_ - x_from_) * static_cast<float>(progress);
-    state.offset_y = y_from_ + (y_to_ - y_from_) * static_cast<float>(progress);
-  } else {
-    state.zoom = zoom_;
-    state.offset_x = offset_x_;
-    state.offset_y = offset_y_;
-  }
+  double progress = zoom_animating_ ? std::clamp(
+      (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
+      0.0, 1.0) : 1.0;
+  if (zoom_reversing_) progress = 1.0 - progress;
+  if (zoom_preparing_) progress = 0.0;
+  const auto pose = legacy_zoom_pose(zoom_region_, progress);
+  state.texture_zoom = legacy_zoom_pose(zoom_region_, 1.0).scale;
+  state.zoom = pose.scale;
+  state.offset_x = pose.x;
+  state.offset_y = pose.y;
   return state;
 }
 
@@ -254,14 +253,16 @@ gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock*, gpointer 
       self->options_.snapshot.empty()) {
     self->current_page_ = self->next_page_;
     self->transition_ = Transition::none;
+    self->zoom_region_ = ZoomRegion::none;
     settled_transition = true;
     if (self->options_.demo) self->schedule_auto_advance();
   }
-  if (self->zoom_animating_ && g_get_monotonic_time() - self->zoom_started_ >= zoom_duration_us) {
-    self->zoom_ = self->zoom_to_;
-    self->offset_x_ = self->x_to_;
-    self->offset_y_ = self->y_to_;
+  if (self->zoom_animating_ && !self->zoom_preparing_ &&
+      g_get_monotonic_time() - self->zoom_started_ >= zoom_duration_us) {
+    if (self->zoom_reversing_) self->zoom_region_ = ZoomRegion::none;
+    self->zoom_reversing_ = false;
     self->zoom_animating_ = false;
+    settled_transition = true;
   }
   if (settled_transition || self->transition_ != Transition::none || self->zoom_animating_) {
     gtk_gl_area_queue_render(GTK_GL_AREA(widget));
@@ -278,31 +279,29 @@ void Application::start_page_change(int delta, bool cube) {
   if (!cube) {
     current_page_ = next_page_;
     transition_ = Transition::none;
+    zoom_region_ = ZoomRegion::none;
   }
   gtk_gl_area_queue_render(GTK_GL_AREA(area_));
 }
 
-void Application::start_zoom(float x, float y, float zoom) {
+void Application::toggle_zoom(ZoomRegion region) {
   if (busy()) return;
-  const FrameState current = frame_state();
-  zoom_from_ = current.zoom;
-  x_from_ = current.offset_x;
-  y_from_ = current.offset_y;
-  zoom_to_ = zoom;
-  x_to_ = x;
-  y_to_ = y;
+  if (zoom_region_ != ZoomRegion::none) {
+    reset_zoom();
+    return;
+  }
+  zoom_region_ = region;
+  zoom_reversing_ = false;
   zoom_started_ = g_get_monotonic_time();
   zoom_animating_ = true;
-}
-
-void Application::toggle_zoom(float x, float y, float zoom) {
-  if (busy()) return;
-  if (std::abs(zoom_ - 1.0F) > 0.001F) reset_zoom();
-  else start_zoom(x, y, zoom);
+  zoom_preparing_ = true;
 }
 
 void Application::reset_zoom() {
-  if (!busy() && std::abs(zoom_ - 1.0F) > 0.001F) start_zoom(0.0F, 0.0F, 1.0F);
+  if (busy() || zoom_region_ == ZoomRegion::none) return;
+  zoom_reversing_ = true;
+  zoom_started_ = g_get_monotonic_time();
+  zoom_animating_ = true;
 }
 
 bool Application::busy() const {
@@ -333,9 +332,10 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
       return true;
     }
     if (keyval == GDK_KEY_l) {
-      zoom_ = zoom_from_ = zoom_to_ = 1.0F;
-      offset_x_ = offset_y_ = x_from_ = x_to_ = y_from_ = y_to_ = 0.0F;
+      zoom_region_ = ZoomRegion::none;
+      zoom_reversing_ = false;
       zoom_animating_ = false;
+      zoom_preparing_ = false;
       if (renderer_) {
         reload_renderer_ = true;
         gtk_gl_area_queue_render(GTK_GL_AREA(area_));
@@ -374,11 +374,11 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
       return true;
     }
     case GDK_KEY_g: reset_zoom(); return true;
-    case GDK_KEY_h: toggle_zoom(0.45F, -0.35F, 2.0F); return true;
-    case GDK_KEY_j: toggle_zoom(-0.45F, -0.35F, 2.0F); return true;
-    case GDK_KEY_k: toggle_zoom(0.45F, 0.35F, 2.0F); return true;
-    case GDK_KEY_l: toggle_zoom(-0.45F, 0.35F, 2.0F); return true;
-    case GDK_KEY_z: toggle_zoom(0.0F, 0.1F, 1.5F); return true;
+    case GDK_KEY_h: toggle_zoom(ZoomRegion::upper_left); return true;
+    case GDK_KEY_j: toggle_zoom(ZoomRegion::upper_right); return true;
+    case GDK_KEY_k: toggle_zoom(ZoomRegion::lower_left); return true;
+    case GDK_KEY_l: toggle_zoom(ZoomRegion::lower_right); return true;
+    case GDK_KEY_z: toggle_zoom(ZoomRegion::center); return true;
     case GDK_KEY_f:
       if (gtk_window_is_fullscreen(GTK_WINDOW(window_))) gtk_window_unfullscreen(GTK_WINDOW(window_));
       else gtk_window_fullscreen(GTK_WINDOW(window_));
