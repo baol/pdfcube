@@ -14,7 +14,7 @@ fixed-function OpenGL, and Autotools implementation has been removed.
 
 ## Requirements
 
-PDFCube requires GTK 4.10 or newer, Poppler GLib 22.0 or newer, and an
+PDFCube requires GTK 4.12 or newer, Poppler GLib 22.0 or newer, and an
 OpenGL 3.3-capable driver. On Debian 13 or Ubuntu 24.04, install the build
 dependencies with:
 
@@ -24,7 +24,12 @@ sudo apt install g++ meson ninja-build pkg-config \
   libboost-program-options-dev
 ```
 
-The test suite additionally uses Python 3, Xvfb, and Xauth.
+The test suite additionally uses Python 3, Xvfb, Xauth, and Mesa's software
+OpenGL driver. Install them with:
+
+```sh
+sudo apt install python3 xvfb xauth libgl1-mesa-dri
+```
 
 ## Build and install
 

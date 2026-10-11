@@ -22,6 +22,17 @@ double eased(double value) {
   return value * value * (3.0 - 2.0 * value);
 }
 
+void require_gl_context(GtkGLArea* area) {
+  gtk_gl_area_make_current(area);
+  if (GError* error = gtk_gl_area_get_error(area)) {
+    throw std::runtime_error(std::string("OpenGL initialization failed: ") + error->message);
+  }
+  if (gdk_gl_context_get_current() == nullptr) {
+    throw std::runtime_error(
+        "OpenGL initialization failed: GTK did not make a GLX or EGL context current");
+  }
+}
+
 }  // namespace
 
 Application::Application(Options options) : options_(std::move(options)) {}
@@ -51,6 +62,7 @@ void Application::activate(GtkApplication* application) {
   gtk_window_set_default_size(GTK_WINDOW(window_), 960, 720);
 
   area_ = gtk_gl_area_new();
+  gtk_gl_area_set_allowed_apis(GTK_GL_AREA(area_), GDK_GL_API_GL);
   gtk_gl_area_set_required_version(GTK_GL_AREA(area_), 3, 3);
   gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(area_), true);
   gtk_widget_set_hexpand(area_, true);
@@ -119,11 +131,6 @@ void Application::open_document(const std::string& filename) {
       transition_ = cube_transitions_[1] ? Transition::cube_forward : Transition::switch_page;
       transition_started_ = g_get_monotonic_time();
     }
-    if (gtk_widget_get_realized(area_)) {
-      gtk_gl_area_make_current(GTK_GL_AREA(area_));
-      renderer_ = std::make_unique<Renderer>(*document_, options_.background, options_.top);
-      renderer_->initialize();
-    }
     gtk_gl_area_queue_render(GTK_GL_AREA(area_));
     if (options_.demo) schedule_auto_advance();
   } catch (const std::exception& error) {
@@ -160,31 +167,38 @@ void Application::realize_callback(GtkGLArea* area, gpointer data) {
   if (GError* error = gtk_gl_area_get_error(area)) {
     self->startup_error_ = std::string("OpenGL initialization failed: ") + error->message;
     g_application_quit(G_APPLICATION(self->application_));
-    return;
-  }
-  if (self->document_) {
-    try {
-      self->renderer_ = std::make_unique<Renderer>(*self->document_, self->options_.background,
-                                                   self->options_.top);
-      self->renderer_->initialize();
-    } catch (const std::exception& error) {
-      self->startup_error_ = error.what();
-      g_application_quit(G_APPLICATION(self->application_));
-    }
   }
 }
 
 void Application::unrealize_callback(GtkGLArea* area, gpointer data) {
   auto* self = static_cast<Application*>(data);
-  gtk_gl_area_make_current(area);
-  if (self->renderer_) self->renderer_->release();
+  if (self->renderer_) {
+    try {
+      require_gl_context(area);
+      self->renderer_->release();
+    } catch (const std::exception&) {
+      // The context has already gone away, so its resources go with it.
+    }
+  }
   self->renderer_.reset();
 }
 
-gboolean Application::render_callback(GtkGLArea* area, GdkGLContext*, gpointer data) {
+gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gpointer data) {
   auto* self = static_cast<Application*>(data);
-  if (!self->renderer_) return TRUE;
+  if (!self->document_) return TRUE;
   try {
+    gdk_gl_context_make_current(context);
+    require_gl_context(area);
+    if (self->reload_renderer_ && self->renderer_) {
+      self->renderer_->release();
+      self->renderer_.reset();
+      self->reload_renderer_ = false;
+    }
+    if (!self->renderer_) {
+      self->renderer_ = std::make_unique<Renderer>(
+          *self->document_, self->options_.background, self->options_.top);
+      self->renderer_->initialize();
+    }
     const int width = gtk_widget_get_width(GTK_WIDGET(area));
     const int height = gtk_widget_get_height(GTK_WIDGET(area));
     const FrameState state = self->frame_state();
@@ -302,9 +316,7 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
     }
     if (keyval == GDK_KEY_l) {
       if (renderer_) {
-        gtk_gl_area_make_current(GTK_GL_AREA(area_));
-        renderer_->release();
-        renderer_->initialize();
+        reload_renderer_ = true;
         gtk_gl_area_queue_render(GTK_GL_AREA(area_));
       }
       return true;

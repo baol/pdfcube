@@ -12,7 +12,7 @@ project(
   ],
 )
 
-gtk = dependency('gtk4', version: '>=4.10')
+gtk = dependency('gtk4', version: '>=4.12')
 poppler = dependency('poppler-glib', version: '>=22.0')
 cairo = dependency('cairo')
 epoxy = dependency('epoxy')

@@ -65,6 +65,7 @@ class Application {
   bool zoom_animating_{false};
   gint64 zoom_started_{0};
   guint auto_advance_source_{0};
+  bool reload_renderer_{false};
   bool snapshot_written_{false};
   std::string startup_error_;
 };
