@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=PDFCube
+Comment=Present PDF slides with animated 3D transitions
+TryExec=pdfcube
+Exec=pdfcube %f
+StartupNotify=true
+Terminal=false
+Type=Application
+Icon=org.pdfcube.pdfcube
+Categories=Office;Presentation;
+MimeType=application/pdf;
+Keywords=PDF;presentation;slides;OpenGL;

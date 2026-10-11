@@ -1,0 +1,89 @@
+#pragma once
+
+#include "document.hpp"
+#include "options.hpp"
+
+#include <epoxy/gl.h>
+
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <string>
+#include <thread>
+#include <vector>
+
+namespace pdfcube {
+
+enum class Transition { none, cube_forward, cube_backward, switch_page };
+
+struct FrameState {
+  int current_page{0};
+  int next_page{0};
+  Transition transition{Transition::none};
+  double progress{0.0};
+  float zoom{1.0F};
+  float offset_x{0.0F};
+  float offset_y{0.0F};
+};
+
+class Renderer {
+ public:
+  Renderer(Document& document, Color background, Color top);
+  ~Renderer();
+
+  Renderer(const Renderer&) = delete;
+  Renderer& operator=(const Renderer&) = delete;
+
+  void initialize();
+  void release();
+  void render(int width, int height, const FrameState& frame);
+  void write_png(const std::string& filename, int width, int height) const;
+
+ private:
+  struct PageTexture {
+    GLuint name{0};
+    int maximum_size{0};
+  };
+
+  struct PreparedPage {
+    Surface surface;
+    int maximum_size{0};
+    int requested_size{0};
+  };
+
+  struct RenderRequest {
+    int page;
+    int maximum_size;
+  };
+
+  GLuint compile_shader(GLenum type, const char* source);
+  GLuint texture_for_page(int page, int maximum_size);
+  void schedule_page(int page, int maximum_size);
+  void render_pages_in_background();
+  void preload_neighbors(int page, int maximum_size);
+  void draw_page(int page, int maximum_size, const float* matrix);
+  void draw_color(const Color& color, const float* matrix);
+
+  Document& document_;
+  Color background_;
+  Color top_;
+  GLuint program_{0};
+  GLuint vao_{0};
+  GLuint vbo_{0};
+  GLint matrix_uniform_{-1};
+  GLint texture_uniform_{-1};
+  GLint color_uniform_{-1};
+  GLint textured_uniform_{-1};
+  GLint maximum_texture_size_{0};
+  std::vector<PageTexture> textures_;
+  std::vector<PreparedPage> prepared_pages_;
+  std::deque<RenderRequest> render_requests_;
+  std::mutex prepared_mutex_;
+  std::mutex document_render_mutex_;
+  std::condition_variable prepared_condition_;
+  std::thread render_thread_;
+  bool stop_render_thread_{false};
+};
+
+}  // namespace pdfcube
+

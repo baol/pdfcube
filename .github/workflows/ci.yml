@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential meson ninja-build python3 xvfb xauth mesa-utils \
+            libgl1-mesa-dri \
+            libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
+            libboost-program-options-dev appstream desktop-file-utils \
+            debhelper lintian
+      - name: Configure
+        run: meson setup build -Db_sanitize=address,undefined
+      - name: Build
+        run: meson compile -C build
+      - name: Test
+        run: meson test -C build --print-errorlogs
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate org.pdfcube.pdfcube.desktop
+          appstreamcli validate --pedantic --no-net build/org.pdfcube.pdfcube.metainfo.xml
+      - name: Build source archive
+        run: meson dist -C build --formats gztar
+      - name: Build Debian package
+        run: |
+          sed -i '1s/ unstable;/ noble;/' debian/changelog
+          dpkg-buildpackage -us -uc -b
+      - name: Lint Debian package
+        run: lintian --profile ubuntu ../pdfcube_*.changes
+
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: brew install meson ninja pkg-config gtk4 libepoxy poppler boost
+      - name: Configure
+        run: meson setup build -Dwerror=true
+      - name: Build
+        run: meson compile -C build
+      - name: Test command-line interface
+        run: meson test -C build "command-line compatibility" --print-errorlogs
+
+  windows:
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libepoxy
+            mingw-w64-ucrt-x86_64-poppler
+            mingw-w64-ucrt-x86_64-boost
+      - name: Configure
+        run: meson setup build -Dwerror=true
+      - name: Build
+        run: meson compile -C build
+      - name: Test command-line interface
+        run: meson test -C build "command-line compatibility" --print-errorlogs
+

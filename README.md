@@ -1,68 +1,123 @@
-PDFCube 0.0.5
-=============
+# PDFCube
 
-[![Build Status](https://drone.io/github.com/baol/pdfcube/status.png)](https://drone.io/github.com/baol/pdfcube/latest)
+[![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 
-PDFCube renders PDF presentations with special 3D effects. It adds
-eye-candy to your PDF presentations, specially Latex, Beamer and
-Prosper ones.
+PDFCube is a focused PDF presentation viewer with animated 3D cube
+transitions, programmed slide timing, and keyboard-controlled zoom regions.
+It is especially useful for slide decks produced by LaTeX Beamer and office
+suites.
 
-Please see the man page for usage information.
+The current PDFCube release is a complete modernization of the original
+application. It uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3,
+libepoxy, Poppler GLib, Cairo, Boost Program Options, and Meson. The obsolete
+GtkGLExt, fixed-function OpenGL, and Autotools implementation has been removed.
 
-You'll need an OpenGL DRI enabled Xorg. GPL ATI 9250 driver is OK,
-i've not tested other cards but had feedback from many users on the
-net about a wide range of cards.
+## Requirements
 
-This is alpha software (and right now it's a quick hack too), but once
-you manage to get it working it's fairly stable and usable.
+PDFCube requires GTK 4.12 or newer, Poppler GLib 22.0 or newer, and an
+OpenGL or OpenGL ES 3.0-capable driver. On Debian 13 or Ubuntu 24.04, install
+the build dependencies with:
 
-If you want to hack on the code feel free to contact me at
-<mirko.maischberger@gmail.com> either via mail or via jabber.
+```sh
+sudo apt install g++ meson ninja-build pkg-config \
+  libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
+  libboost-program-options-dev
+```
 
-BUGS
-----
+The test suite additionally uses Python 3, Xvfb, Xauth, and Mesa's software
+OpenGL driver. Install them with:
 
-This program is intended to present landscape PDF files on 4:3
-projection screen, it is not suited to view generic PDF files. If you
-try to view portrait files you'll see only the top of each page. This
-is not so strange since this program is not intended as a generic PDF
-viewer but as a specific presentation tool.
+```sh
+sudo apt install python3 xvfb xauth libgl1-mesa-dri
+```
 
-There is a little glitch in the animation when going back with cube
-animation. I hope is not too annoying.
+On macOS with Homebrew:
 
-If you experience other glitches it's probably due to some compositing
-software (KDE Kwin, Compiz or others) this is a limitation in Xorg and
-the graphic drivers: you can only have one OpenGL accelerated
-application at a time. Try disabling the wm effects.
+```sh
+brew install meson ninja pkg-config gtk4 libepoxy poppler boost
+```
 
-With some older versions of libpoppler there are some rendering
-errors, this should be solved by recent poppler releases.
+On Windows, use an MSYS2 UCRT64 shell and install:
 
-Conditional compilation macros and Dependencies
------------------------------------------------
+```sh
+pacman -S --needed mingw-w64-ucrt-x86_64-{toolchain,meson,ninja,python,gtk4,libepoxy,poppler,boost}
+```
 
-You can define NDEBUG to get rid of debug output. You can try
-ENABLE_FOG if you like, the default is to have it off.
+The renderer selects GLSL 1.30 or GLSL ES 3.00 to match the context supplied
+by GTK. Linux is tested on X11 and Wayland; CI also compiles and exercises the
+command-line interface on Windows and macOS. Actual GPU/driver combinations
+are tracked in [COMPATIBILITY.md](COMPATIBILITY.md) rather than assumed to work
+untested.
 
- * Linux/BSD with Xorg
- * Poppler (>=0.5.4 recommended) (Debian/Ubuntu package:
-   libpoppler-dev libpoppler-glib-dev)
- * GtkGlExt (Debian/Ubuntu package: libgtkglext1-dev)
- * Boost C++ Program Option Library
+## Build and install
 
-Contact information
--------------------
+```sh
+meson setup build --buildtype=release
+meson compile -C build
+meson test -C build --print-errorlogs
+sudo meson install -C build
+```
 
-Feel free to write to <mirko.maischberger@gmail.com>
+For a local build without installation:
 
-Word of Mouth
--------------
+```sh
+./build/src/pdfcube presentation.pdf
+```
 
-If you like this project please support by voting on this sites or blogging it:
+See [INSTALL](INSTALL) for prefix, staging, and uninstall instructions.
 
- * http://freshmeat.net/projects/pdfcube
- * http://www.gnomefiles.org/app.php/PDF_Cube
+## Usage
 
-Happy Hacking
-> Mirko Maischberger
+Run `pdfcube --help` for the complete command-line interface. The established
+options remain available:
+
+- `--bgcolor r:g:b` sets the background color.
+- `--top-color r:g:b` sets the cube cap color.
+- `--demo` enables automatic slide advancement.
+- `--program n:x:...` programs durations and cube (`c`) or plain (`p`)
+  transitions.
+- `--no-fullscreen` starts in a window.
+
+When no PDF is supplied, PDFCube opens a GTK file chooser. Options can also
+be stored in `~/.pdfcuberc`; command-line values take precedence.
+
+Common controls include Space or Page Down to advance, `c`/`a` for forward
+and backward cube transitions, arrow keys for plain navigation, `h`/`j`/`k`/
+`l`/`z` for zoom regions, `g` to reset zoom, `f` for fullscreen, and Escape
+or Ctrl-Q to quit. Number keys `1`–`9` jump to pages 1, 6, 11, and so on;
+the separate `Ctrl-1`–`Ctrl-9` bindings jump to the corresponding cube
+section. See `man pdfcube` for the full list.
+
+## Tests
+
+```sh
+meson test -C build --print-errorlogs
+```
+
+The suite checks the public command-line contract and produces deterministic
+headless rendering snapshots under Xvfb. It covers page rendering, cube and
+plain programs, configured colors, and command-line-over-config precedence.
+`--snapshot` and `--snapshot-progress` are private regression-test hooks.
+
+## Release and packaging
+
+Meson can produce a tested source archive with:
+
+```sh
+meson dist -C build --formats gztar
+```
+
+Pushing a signed `vMAJOR.MINOR.PATCH` tag runs the release workflow, which
+creates a GitHub Release containing the source archive, a Debian package built
+on the latest Ubuntu LTS runner, an x86-64 AppImage, and SHA-256 checksums.
+
+Debian packaging is maintained in `debian/`. Maintainers should follow
+[RELEASING.md](RELEASING.md) before creating a release tag.
+
+## License
+
+PDFCube is licensed under the GNU General Public License, version 2 or later.
+See [LICENSE](LICENSE).
+
+PDFCube was created by Mirko Maischberger, with contributions from Karol
+Sokolowski and others listed in the Git history.

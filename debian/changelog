@@ -1,3 +1,15 @@
+pdfcube (0.1.0-1) unstable; urgency=medium
+
+  * Port the application to GTK 4 and GtkGLArea.
+  * Replace fixed-function OpenGL with a shader-based renderer.
+  * Add Meson, automated CLI/rendering tests, and modern desktop metadata.
+  * Remove the obsolete Autotools and GtkGLExt implementation.
+  * Refresh documentation, release metadata, and packaging validation.
+  * Support desktop OpenGL and OpenGL ES 3 contexts selected by GTK.
+  * Add Linux, Windows, and macOS build coverage.
+
+ -- Mirko Maischberger <mirko.maischberger@gmail.com>  Sun, 11 Oct 2026 12:00:00 +0200
+
 pdfcube (0.0.3-1) unstable; urgency=low
 
   * Initial release 
