@@ -15,8 +15,10 @@ void SurfaceDeleter::operator()(cairo_surface_t* surface) const {
 
 Document::Document(const std::string& filename) {
   const auto absolute = std::filesystem::absolute(filename);
+  const auto absolute_u8 = absolute.u8string();
+  const std::string absolute_utf8(absolute_u8.begin(), absolute_u8.end());
   GError* error = nullptr;
-  char* uri = g_filename_to_uri(absolute.c_str(), nullptr, &error);
+  char* uri = g_filename_to_uri(absolute_utf8.c_str(), nullptr, &error);
   if (uri == nullptr) {
     const std::string message = error != nullptr ? error->message : "invalid filename";
     g_clear_error(&error);
