@@ -4,6 +4,7 @@ Comment=Present PDF slides with animated 3D transitions
 TryExec=pdfcube
 Exec=pdfcube %f
 StartupNotify=true
+StartupWMClass=org.pdfcube.pdfcube
 Terminal=false
 Type=Application
 Icon=org.pdfcube.pdfcube
