@@ -25,17 +25,19 @@ configure_file(output: 'pdfcube-config.hpp', configuration: version_configuratio
 subdir('src')
 subdir('tests')
 
-install_data(
-  'org.pdfcube.pdfcube.desktop',
-  install_dir: get_option('datadir') / 'applications',
-)
-install_data(
-  'org.pdfcube.pdfcube.metainfo.xml',
-  install_dir: get_option('datadir') / 'metainfo',
-)
-install_data(
-  'data/org.pdfcube.pdfcube.svg',
-  install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps',
-)
-install_man('man/pdfcube.1')
+if host_machine.system() != 'windows' and host_machine.system() != 'darwin'
+  install_data(
+    'org.pdfcube.pdfcube.desktop',
+    install_dir: get_option('datadir') / 'applications',
+  )
+  install_data(
+    'org.pdfcube.pdfcube.metainfo.xml',
+    install_dir: get_option('datadir') / 'metainfo',
+  )
+  install_data(
+    'data/org.pdfcube.pdfcube.svg',
+    install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps',
+  )
+  install_man('man/pdfcube.1')
+endif
 

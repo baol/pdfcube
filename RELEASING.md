@@ -18,8 +18,9 @@
    lintian ../pdfcube_*.changes
    ```
 
-5. Inspect the source archive and Debian package contents. Install and run the
-   package on both Wayland and X11 with a hardware OpenGL driver.
+5. Inspect the source archive and Debian package contents. Complete every
+   manual rendering smoke test marked as a release requirement in
+   `COMPATIBILITY.md`, including Wayland/NVIDIA, X11, Windows, and macOS.
 6. Commit the release preparation, then create and push an annotated tag:
 
    ```sh

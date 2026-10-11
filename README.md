@@ -8,15 +8,15 @@ It is especially useful for slide decks produced by LaTeX Beamer and office
 suites.
 
 PDFCube 0.1.0 is a complete modernization of the original application. It
-uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL 3.3, libepoxy, Poppler
+uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3, libepoxy, Poppler
 GLib, Cairo, Boost Program Options, and Meson. The obsolete GtkGLExt,
 fixed-function OpenGL, and Autotools implementation has been removed.
 
 ## Requirements
 
 PDFCube requires GTK 4.12 or newer, Poppler GLib 22.0 or newer, and an
-OpenGL 3.3-capable driver. On Debian 13 or Ubuntu 24.04, install the build
-dependencies with:
+OpenGL or OpenGL ES 3.0-capable driver. On Debian 13 or Ubuntu 24.04, install
+the build dependencies with:
 
 ```sh
 sudo apt install g++ meson ninja-build pkg-config \
@@ -30,6 +30,24 @@ OpenGL driver. Install them with:
 ```sh
 sudo apt install python3 xvfb xauth libgl1-mesa-dri
 ```
+
+On macOS with Homebrew:
+
+```sh
+brew install meson ninja pkg-config gtk4 libepoxy poppler boost
+```
+
+On Windows, use an MSYS2 UCRT64 shell and install:
+
+```sh
+pacman -S --needed mingw-w64-ucrt-x86_64-{toolchain,meson,ninja,python,gtk4,libepoxy,poppler,boost}
+```
+
+The renderer selects GLSL 1.30 or GLSL ES 3.00 to match the context supplied
+by GTK. Linux is tested on X11 and Wayland; CI also compiles and exercises the
+command-line interface on Windows and macOS. Actual GPU/driver combinations
+are tracked in [COMPATIBILITY.md](COMPATIBILITY.md) rather than assumed to work
+untested.
 
 ## Build and install
 

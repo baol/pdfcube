@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <vector>
 
@@ -13,8 +15,33 @@ namespace {
 
 constexpr float pi = 3.14159265358979323846F;
 
-const char* vertex_shader = R"(
-#version 330 core
+const char* desktop_vertex_shader = R"(
+#version 130
+in vec3 position;
+in vec2 texture_coordinate;
+uniform mat4 transform;
+out vec2 uv;
+void main() {
+  gl_Position = transform * vec4(position, 1.0);
+  uv = texture_coordinate;
+}
+)";
+
+const char* desktop_fragment_shader = R"(
+#version 130
+in vec2 uv;
+uniform sampler2D page_texture;
+uniform vec4 solid_color;
+uniform bool textured;
+out vec4 output_color;
+void main() {
+  output_color = textured ? texture(page_texture, uv) : solid_color;
+}
+)";
+
+const char* es_vertex_shader = R"(
+#version 300 es
+precision highp float;
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 texture_coordinate;
 uniform mat4 transform;
@@ -25,8 +52,9 @@ void main() {
 }
 )";
 
-const char* fragment_shader = R"(
-#version 330 core
+const char* es_fragment_shader = R"(
+#version 300 es
+precision highp float;
 in vec2 uv;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
@@ -36,6 +64,26 @@ void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
 }
 )";
+
+std::vector<unsigned char> surface_pixels_rgba(cairo_surface_t* surface) {
+  const int width = cairo_image_surface_get_width(surface);
+  const int height = cairo_image_surface_get_height(surface);
+  const int stride = cairo_image_surface_get_stride(surface);
+  const unsigned char* source = cairo_image_surface_get_data(surface);
+  std::vector<unsigned char> result(static_cast<std::size_t>(width * height * 4));
+  for (int row = 0; row < height; ++row) {
+    for (int column = 0; column < width; ++column) {
+      std::uint32_t argb = 0;
+      std::memcpy(&argb, source + row * stride + column * 4, sizeof(argb));
+      const std::size_t offset = static_cast<std::size_t>((row * width + column) * 4);
+      result[offset] = static_cast<unsigned char>((argb >> 16U) & 0xffU);
+      result[offset + 1] = static_cast<unsigned char>((argb >> 8U) & 0xffU);
+      result[offset + 2] = static_cast<unsigned char>(argb & 0xffU);
+      result[offset + 3] = static_cast<unsigned char>((argb >> 24U) & 0xffU);
+    }
+  }
+  return result;
+}
 
 }  // namespace
 
@@ -64,11 +112,16 @@ GLuint Renderer::compile_shader(GLenum type, const char* source) {
 }
 
 void Renderer::initialize() {
-  const GLuint vertex = compile_shader(GL_VERTEX_SHADER, vertex_shader);
-  const GLuint fragment = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
+  const bool desktop = epoxy_is_desktop_gl();
+  const GLuint vertex =
+      compile_shader(GL_VERTEX_SHADER, desktop ? desktop_vertex_shader : es_vertex_shader);
+  const GLuint fragment =
+      compile_shader(GL_FRAGMENT_SHADER, desktop ? desktop_fragment_shader : es_fragment_shader);
   program_ = glCreateProgram();
   glAttachShader(program_, vertex);
   glAttachShader(program_, fragment);
+  glBindAttribLocation(program_, 0, "position");
+  glBindAttribLocation(program_, 1, "texture_coordinate");
   glLinkProgram(program_);
   glDeleteShader(vertex);
   glDeleteShader(fragment);
@@ -119,15 +172,16 @@ GLuint Renderer::texture_for_page(int page) {
   Surface surface = document_.render_page(page);
   const int width = cairo_image_surface_get_width(surface.get());
   const int height = cairo_image_surface_get_height(surface.get());
+  const std::vector<unsigned char> pixels = surface_pixels_rgba(surface.get());
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA,
-               GL_UNSIGNED_BYTE, cairo_image_surface_get_data(surface.get()));
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, pixels.data());
   return texture;
 }
 
@@ -195,13 +249,23 @@ void Renderer::render(int width, int height, const FrameState& frame) {
 
 void Renderer::write_png(const std::string& filename, int width, int height) const {
   std::vector<unsigned char> pixels(static_cast<std::size_t>(width * height * 4));
-  glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, pixels.data());
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
   const int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);
   std::vector<unsigned char> flipped(static_cast<std::size_t>(stride * height));
   for (int row = 0; row < height; ++row) {
-    std::copy_n(pixels.data() + static_cast<std::size_t>((height - row - 1) * width * 4),
-                static_cast<std::size_t>(width * 4),
-                flipped.data() + static_cast<std::size_t>(row * stride));
+    const unsigned char* source =
+        pixels.data() + static_cast<std::size_t>((height - row - 1) * width * 4);
+    unsigned char* destination =
+        flipped.data() + static_cast<std::size_t>(row * stride);
+    for (int column = 0; column < width; ++column) {
+      const std::uint32_t argb =
+          (static_cast<std::uint32_t>(source[column * 4 + 3]) << 24U) |
+          (static_cast<std::uint32_t>(source[column * 4]) << 16U) |
+          (static_cast<std::uint32_t>(source[column * 4 + 1]) << 8U) |
+          static_cast<std::uint32_t>(source[column * 4 + 2]);
+      std::memcpy(destination + column * 4, &argb, sizeof(argb));
+    }
   }
   cairo_surface_t* surface = cairo_image_surface_create_for_data(
       flipped.data(), CAIRO_FORMAT_ARGB32, width, height, stride);

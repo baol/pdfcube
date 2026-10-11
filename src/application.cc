@@ -62,8 +62,9 @@ void Application::activate(GtkApplication* application) {
   gtk_window_set_default_size(GTK_WINDOW(window_), 960, 720);
 
   area_ = gtk_gl_area_new();
-  gtk_gl_area_set_allowed_apis(GTK_GL_AREA(area_), GDK_GL_API_GL);
-  gtk_gl_area_set_required_version(GTK_GL_AREA(area_), 3, 3);
+  gtk_gl_area_set_allowed_apis(
+      GTK_GL_AREA(area_), static_cast<GdkGLAPI>(GDK_GL_API_GL | GDK_GL_API_GLES));
+  gtk_gl_area_set_required_version(GTK_GL_AREA(area_), 3, 0);
   gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(area_), true);
   gtk_widget_set_hexpand(area_, true);
   gtk_widget_set_vexpand(area_, true);

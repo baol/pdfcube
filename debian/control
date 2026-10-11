@@ -9,9 +9,9 @@ Build-Depends:
  python3,
  xvfb,
  xauth,
- libgtk-4-dev,
+ libgtk-4-dev (>= 4.12),
  libepoxy-dev,
- libpoppler-glib-dev,
+ libpoppler-glib-dev (>= 22.0),
  libcairo2-dev,
  libboost-program-options-dev
 Standards-Version: 4.7.0
