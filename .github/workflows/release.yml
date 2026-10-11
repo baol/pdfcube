@@ -2,11 +2,15 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+    branches:
+      - master
 
 permissions:
   contents: write
+
+concurrency:
+  group: automatic-release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -16,13 +20,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify release tag
+      - name: Calculate release version
         id: version
         shell: bash
         run: |
-          version="$(python3 tools/version.py)"
-          test "v${version}" = "${GITHUB_REF_NAME}"
+          tag="$(git tag --points-at HEAD --list 'v*' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V | tail -n 1 || true)"
+          if test -n "${tag}"; then
+            version="${tag#v}"
+            create_tag=false
+          else
+            version="$(python3 tools/next_version.py)"
+            tag="v${version}"
+            test -z "$(git tag --list "${tag}")"
+            create_tag=true
+          fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "create_tag=${create_tag}" >> "${GITHUB_OUTPUT}"
+          echo "PDFCUBE_VERSION=${version}" >> "${GITHUB_ENV}"
 
       - name: Install build and packaging dependencies
         run: |
@@ -46,8 +63,6 @@ jobs:
         run: meson dist -C build --formats gztar
 
       - name: Build Debian package
-        env:
-          PDFCUBE_VERSION: ${{ steps.version.outputs.version }}
         run: |
           ubuntu_codename="$(. /etc/os-release; echo "${VERSION_CODENAME}")"
           sed -i -E \
@@ -107,8 +122,19 @@ jobs:
           path: release-assets/
           if-no-files-found: error
 
+      - name: Create release tag
+        if: steps.version.outputs.create_tag == 'true'
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag -a "${RELEASE_TAG}" -m "PDFCube ${PDFCUBE_VERSION}"
+          git push origin "${RELEASE_TAG}"
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           generate_release_notes: true
           files: release-assets/*

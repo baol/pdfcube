@@ -3,7 +3,11 @@ python = import('python').find_installation('python3')
 test(
   'version derivation',
   python,
-  args: [files('test_version.py'), files('../tools/version.py')],
+  args: [
+    files('test_version.py'),
+    files('../tools/version.py'),
+    files('../tools/next_version.py'),
+  ],
 )
 
 navigation_test = executable(
