@@ -1,8 +1,10 @@
 # Releasing PDFCube
 
-Git tags are the release-version source of truth. A release tag must use the
-form `vMAJOR.MINOR.PATCH`; the build derives the executable, manual, AppStream
-metadata, archive, package, and artifact versions from it.
+Stable Git tags remain the release-version source of truth. The release
+workflow creates them automatically after a successful push to `master`.
+`MIN_VERSION` provides the version floor. Ordinary releases increment the
+highest stable tag's patch component; raise the major or minor component in
+`MIN_VERSION` manually when that release series should change.
 
 1. Add the release notes to `NEWS`. Update the release description and date in
    `org.pdfcube.pdfcube.metainfo.xml` when appropriate; its version placeholder
@@ -23,16 +25,17 @@ metadata, archive, package, and artifact versions from it.
 3. Inspect the source archive and Debian package contents. Complete every
    manual rendering smoke test marked as a release requirement in
    `COMPATIBILITY.md`, including Wayland/NVIDIA, X11, Windows, and macOS.
-4. Commit and merge the release preparation to `master`, then create and push
-   a signed tag. For example:
+4. Commit and merge the release preparation to `master`. Do not create the tag
+   manually. For a new release series, change `MIN_VERSION` in the same pull
+   request, for example:
 
    ```sh
-   git tag -s v1.2.3 -m "PDFCube 1.2.3"
-   git push origin v1.2.3
+   printf '1.2.0\n' > MIN_VERSION
    ```
 
-The tag starts `.github/workflows/release.yml`. It verifies that the derived
-version matches the tag, builds and tests on the latest Ubuntu LTS runner, then
-publishes a GitHub Release with a `.tar.gz` source archive, an amd64 `.deb`, an
-x86-64 AppImage, and `SHA256SUMS`. GitHub Actions also retains the same files
-as a workflow artifact.
+The `master` push starts `.github/workflows/release.yml`. It calculates the
+version, builds and tests on the latest Ubuntu LTS runner, and creates the
+annotated tag only after every artifact succeeds. It then publishes a GitHub
+Release with a `.tar.gz` source archive, an amd64 `.deb`, an x86-64 AppImage,
+and `SHA256SUMS`. GitHub Actions also retains the same files as a workflow
+artifact.
