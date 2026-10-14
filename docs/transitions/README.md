@@ -123,7 +123,9 @@ python3 tools/transition_gallery.py build/src/pdfcube build/transition-gallery
 Add `--update-docs` to regenerate the checked-in contact sheets from those same
 captures. The default 33 samples include exact quarter-progress frames.
 Use `--effects Cover Uncover` for a focused page-flip review; CI captures all
-implemented effects by default.
+implemented effects by default. Gallery capture reuses one Xvfb display and
+captures up to four frames concurrently. Use `--jobs N` to tune that limit for
+the available CPU and memory; this does not change the generated frames.
 
 Open build/transition-gallery/index.html. Each effect/axis/direction has a looping video,
 five-frame contact sheet, full-resolution individual frames, and its input PDF.

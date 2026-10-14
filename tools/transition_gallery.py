@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Capture review assets from the actual renderer; needs Pillow and ffmpeg."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 from PIL import Image, ImageDraw
@@ -15,13 +17,30 @@ parser = argparse.ArgumentParser()
 parser.add_argument("binary", type=Path)
 parser.add_argument("output", type=Path)
 parser.add_argument("--frames", type=int, default=33)
+parser.add_argument("--jobs", type=int, default=min(4, os.cpu_count() or 1),
+                    help="Number of snapshots to capture concurrently (default: up to 4)")
 parser.add_argument("--update-docs", action="store_true",
                     help="Refresh the checked-in contact sheets from these captures")
 parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover"),
                     help="Capture only selected effects (default: all)")
+parser.add_argument("--inside-xvfb", action="store_true", help=argparse.SUPPRESS)
 args = parser.parse_args()
 if args.frames < 5:
     parser.error("--frames must be at least 5")
+if args.jobs < 1:
+    parser.error("--jobs must be at least 1")
+
+# Starting a fresh X server for every frame dominates the gallery runtime. Keep
+# xvfb-run as the portable display allocator, but use it once for the complete
+# gallery and let the child processes share that display.
+if not args.inside_xvfb:
+    xvfb_run = shutil.which("xvfb-run")
+    if not xvfb_run:
+        parser.error("xvfb-run is required")
+    command = [xvfb_run, "-a", sys.executable, str(Path(__file__).resolve()),
+               *sys.argv[1:], "--inside-xvfb"]
+    raise SystemExit(subprocess.run(command).returncode)
+
 args.output.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1")
 examples = [entry for entry in EXAMPLES if not args.effects or entry[1] in args.effects]
@@ -30,11 +49,17 @@ for name, effect, orientation, motion, angle in examples:
     folder.mkdir(exist_ok=True)
     pdf = folder / "fixture.pdf"
     make_pdf(pdf, orientation, effect=effect, motion=motion, angle=angle)
-    for i in range(args.frames):
-        subprocess.run(["xvfb-run", "-a", str(args.binary.resolve()), "--no-fullscreen",
+    for old_frame in folder.glob("frame-*.png"):
+        old_frame.unlink()
+
+    def capture(i):
+        subprocess.run([str(args.binary.resolve()), "--no-fullscreen",
                         "--snapshot", str(folder / f"frame-{i:03}.png"),
                         "--snapshot-progress", str(i / (args.frames - 1)), str(pdf)],
                        env=env, check=True, stdout=subprocess.DEVNULL, timeout=30)
+
+    with ThreadPoolExecutor(max_workers=args.jobs) as executor:
+        list(executor.map(capture, range(args.frames)))
     sheet = Image.new("RGB", (480 * 5, 380), "#202020")
     for column, fraction in enumerate((0, .25, .5, .75, 1)):
         frame = round(fraction * (args.frames - 1))
