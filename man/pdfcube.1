@@ -19,6 +19,9 @@ or vertically according to the document. PDF Box retains the cube effect.
 PDF Split uses two perspective doors on fixed outer hinges: horizontal means
 top/bottom flaps, vertical means left/right doors. Outward opens the old page;
 inward closes the new page. The document selects axis and direction.
+PDF Cover folds the incoming page over the old slide; Uncover peels the old
+page away. These use one curved sheet, with PDF direction 0 (right), 90 (up),
+180 (left), or 270 (down). Missing or unsupported angles default to right.
 Other unsupported PDF transitions currently change pages instantly.
 PDF transition duration controls the animation; page duration controls how
 long automatic playback displays a slide. These are separate values.
@@ -54,6 +57,10 @@ selects rotating slats with a 750 ms animation.
 .B split
 selects hinged doors with a 750 ms animation, using the document's axis and
 direction (horizontal and inward by default).
+.B cover
+and
+.B uncover
+select curved page flips with a 750 ms animation and the document's direction.
 The last pair is repeated for remaining slides.
 For example,
 .B \-\-program 5:c:3:p

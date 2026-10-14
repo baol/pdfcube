@@ -124,6 +124,8 @@ void Application::open_document(const std::string& filename) {
       transitions_[page] = info.cube_transition ? Transition::cube_forward :
           info.transition_type == POPPLER_PAGE_TRANSITION_BLINDS ? Transition::blinds :
           info.transition_type == POPPLER_PAGE_TRANSITION_SPLIT ? Transition::split :
+          info.transition_type == POPPLER_PAGE_TRANSITION_COVER ? Transition::cover :
+          info.transition_type == POPPLER_PAGE_TRANSITION_UNCOVER ? Transition::uncover :
           Transition::switch_page;
       durations_[static_cast<std::size_t>(page)] = info.duration_ms;
     }
@@ -161,7 +163,9 @@ void Application::configure_program() {
       last_cube = effect == "c";
       last_transition = last_cube ? Transition::cube_forward :
           effect == "blinds" ? Transition::blinds :
-          effect == "split" ? Transition::split : Transition::switch_page;
+          effect == "split" ? Transition::split :
+          effect == "cover" ? Transition::cover :
+          effect == "uncover" ? Transition::uncover : Transition::switch_page;
     }
     cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
     transitions_[(page + 1) % document_->page_count()] = last_transition;
@@ -257,7 +261,8 @@ FrameState Application::frame_state() const {
       document_->page_info(next_page_).alignment == POPPLER_PAGE_TRANSITION_VERTICAL;
   if (document_) state.split_inward =
       document_->page_info(next_page_).direction == POPPLER_PAGE_TRANSITION_INWARD;
-  if (transition_ == Transition::blinds || transition_ == Transition::split) return state;
+  if (document_) state.direction_degrees = document_->page_info(next_page_).angle;
+  if (page_effect(transition_)) return state;
   double progress = zoom_animating_ ? std::clamp(
       (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
       0.0, 1.0) : 1.0;
@@ -309,7 +314,7 @@ void Application::start_page_change(int delta, bool cube, bool programmed) {
       if (transition_length_us_ <= 0) transition_ = Transition::switch_page;
     }
   }
-  transition_preparing_ = transition_ == Transition::blinds || transition_ == Transition::split;
+  transition_preparing_ = page_effect(transition_);
   transition_started_ = g_get_monotonic_time();
   if (transition_ == Transition::switch_page) {
     current_page_ = next_page_;

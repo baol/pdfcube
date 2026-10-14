@@ -3,6 +3,7 @@
 #include "math.hpp"
 #include "blinds.hpp"
 #include "split.hpp"
+#include "page_flip.hpp"
 
 #include <algorithm>
 #include <array>
@@ -406,7 +407,7 @@ void Renderer::render(int width, int height, const FrameState& frame) {
 
   glUniform4f(uv_rect_uniform_, 0, 0, 1, 1);
   glUniform1f(shade_uniform_, 1);
-  const bool panels = frame.transition == Transition::blinds || frame.transition == Transition::split;
+  const bool panels = page_effect(frame.transition);
   const bool landed = panels && frame.progress >= 1;
   const auto& page = document_.page_info(landed ? frame.next_page : frame.current_page);
   const Viewport viewport = content_viewport(width, height, page.width / page.height);
@@ -433,9 +434,11 @@ void Renderer::render(int width, int height, const FrameState& frame) {
                 texture_size, Matrix::identity().value.data());
       return;
     }
-    if (frame.transition == Transition::split) {
-      const int base = frame.split_inward ? frame.current_page : frame.next_page;
-      const int doors = frame.split_inward ? frame.next_page : frame.current_page;
+    if (frame.transition != Transition::blinds) {
+      const bool split = frame.transition == Transition::split;
+      const bool cover = split ? frame.split_inward : frame.transition == Transition::cover;
+      const int base = cover ? frame.current_page : frame.next_page;
+      const int sheet = cover ? frame.next_page : frame.current_page;
       const auto fit_page = [&](int index) {
         const auto& info = document_.page_info(index);
         return content_viewport(width, height, info.width / info.height);
@@ -443,24 +446,29 @@ void Renderer::render(int width, int height, const FrameState& frame) {
       const auto base_fit = fit_page(base);
       glViewport(base_fit.x, base_fit.y, base_fit.width, base_fit.height);
       draw_page(base, page_size(base), translate(0, 0, .999F).value.data());
-      const auto fit = fit_page(doors);
+      const auto fit = fit_page(sheet);
       glViewport(fit.x, fit.y, fit.width, fit.height);
-      // Clip opening doors to their page, never into the letterboxing.
       glEnable(GL_SCISSOR_TEST);
       glScissor(fit.x, fit.y, fit.width, fit.height);
-      constexpr float camera = 4;
-      // At atan(camera) each door is edge-on to the viewer at its outer hinge.
-      const float angle = split_angle(frame.progress, frame.split_inward);
-      const Matrix view = perspective(2 * std::atan(1 / camera), 1, .5F, 10) *
-                          translate(0, 0, -camera);
-      for (int i = 0; i < 2; ++i) {
-        const Matrix model = split_door(frame.vertical_panels, i, angle);
-        if (frame.vertical_panels)
-          glUniform4f(uv_rect_uniform_, i * .5F, 0, .5F, 1);
-        else
-          glUniform4f(uv_rect_uniform_, 0, i * .5F, 1, .5F);
-        glUniform1f(shade_uniform_, .7F + .3F * std::cos(angle));
-        draw_page(doors, page_size(doors), (view * model).value.data());
+      const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
+                          translate(0, 0, -flip_camera);
+      if (split) {
+        const float angle = split_angle(frame.progress, frame.split_inward);
+        for (int i = 0; i < 2; ++i) {
+          const Matrix model = split_door(frame.vertical_panels, i, angle);
+          if (frame.vertical_panels)
+            glUniform4f(uv_rect_uniform_, i * .5F, 0, .5F, 1);
+          else
+            glUniform4f(uv_rect_uniform_, 0, i * .5F, 1, .5F);
+          glUniform1f(shade_uniform_, .7F + .3F * std::cos(angle));
+          draw_page(sheet, page_size(sheet), (view * model).value.data());
+        }
+      } else {
+        for (const auto& strip : page_flip(frame.progress, cover, frame.direction_degrees)) {
+          glUniform4fv(uv_rect_uniform_, 1, strip.uv.data());
+          glUniform1f(shade_uniform_, strip.shade);
+          draw_page(sheet, page_size(sheet), (view * strip.model).value.data());
+        }
       }
       glDisable(GL_SCISSOR_TEST);
       return;

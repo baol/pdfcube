@@ -74,6 +74,41 @@ Split with a 750 ms animation, using the destination PDF's axis and direction
 Both full-resolution pages are prepared before the animation clock starts.
 At 0% and 100% the renderer draws the exact static source/destination page.
 
+## Cover / Uncover: experimental, awaiting visual approval
+
+Cover folds a gently curved incoming sheet over the old slide. Uncover peels the
+outgoing sheet away to reveal the next slide. Unlike Split's two rigid doors,
+this is one connected sheet with a fixed outer edge, perspective and angular
+shading. Sixty-four joined strips approximate the curve with constant arc length;
+there is no physics simulation, cast shadow, thickness, or mirrored reverse face.
+The sheet stops edge-on, rather than turning its back toward the audience.
+
+| PDF `/Di` | Travel | Cover hinge | Uncover hinge |
+| --- | --- | --- | --- |
+| 0 (default) | Right | Left | Right |
+| 90 | Up | Bottom | Top |
+| 180 | Left | Right | Left |
+| 270 | Down | Top | Bottom |
+
+Unsupported angles fall back to 0. The destination PDF's `/Trans /D` controls
+duration; `/Dur` remains dwell time. `--program duration:cover` and
+`duration:uncover` select a 750 ms animation with the PDF direction. Existing
+cube/instant navigation is unchanged. Full-resolution source and destination
+pages are ready before motion, with their own aspect ratios and exact static
+endpoints. Moving geometry stays inside its page viewport.
+
+All eight [example PDFs](../../examples/transitions/README.md) use the same
+generator as the tests and gallery. Representative captures:
+
+![Cover traveling right](cover-right.png)
+
+![Uncover traveling left](uncover-left.png)
+
+Other Cover directions: [up](cover-up.png), [left](cover-left.png),
+[down](cover-down.png). Other Uncover directions: [right](uncover-right.png),
+[up](uncover-up.png), [down](uncover-down.png).
+Each direction also has a video in the generated review bundle.
+
 ## Reproduce the review bundle
 
 Install Pillow and ffmpeg in addition to the normal build/test dependencies:
@@ -87,6 +122,8 @@ python3 tools/transition_gallery.py build/src/pdfcube build/transition-gallery
 
 Add `--update-docs` to regenerate the checked-in contact sheets from those same
 captures. The default 33 samples include exact quarter-progress frames.
+Use `--effects Cover Uncover` for a focused page-flip review; CI captures all
+implemented effects by default.
 
 Open build/transition-gallery/index.html. Each effect/axis/direction has a looping video,
 five-frame contact sheet, full-resolution individual frames, and its input PDF.
@@ -101,11 +138,13 @@ same process and add their own fixtures and gallery entry.
 
 ## Validation record
 
-Blinds and Split: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
-Xvfb/software OpenGL. All ten tests passed with warnings treated as errors,
+Blinds, Split and Cover/Uncover: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
+Xvfb/software OpenGL. All thirteen tests passed with warnings treated as errors,
 both normally and with address/undefined-behavior sanitizers.
 The horizontal and vertical contact sheets were inspected for direction and
-readable reverse faces. This is not yet native-platform or motion approval.
+readable reverse faces. Page-flip captures were inspected for curvature,
+direction and readable text; a Split midpoint still matched the previous
+capture byte-for-byte. This is not yet native-platform or motion approval.
 
 - Automated: PDF metadata (fractional animation duration distinct from dwell),
   both axes, portrait/landscape/mixed dimensions, deterministic midpoint,
@@ -114,6 +153,9 @@ readable reverse faces. This is not yet native-platform or motion approval.
   both directions, default PDF parameters, program selection, and reproducible
   committed PDFs. The gallery includes all four Split parameter combinations.
 - Existing cube, zoom, document resolution, CLI and navigation tests remain required.
+- Cover/Uncover checks cover connected curvature, reversible geometry, fixed
+  hinges, unmirrored flat UV mapping, edge-on finish, all four PDF directions,
+  omitted/invalid angle fallback, program selection and reproducible example PDFs.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
   native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback
   memory checks. Still-frame and geometry checks are not substitutes for these.

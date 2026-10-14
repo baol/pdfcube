@@ -14,7 +14,12 @@
 
 namespace pdfcube {
 
-enum class Transition { none, cube_forward, cube_backward, switch_page, blinds, split };
+enum class Transition { none, cube_forward, cube_backward, switch_page, blinds, split, cover, uncover };
+
+inline bool page_effect(Transition transition) {
+  return transition == Transition::blinds || transition == Transition::split ||
+         transition == Transition::cover || transition == Transition::uncover;
+}
 
 struct FrameState {
   int current_page{0};
@@ -23,6 +28,7 @@ struct FrameState {
   double progress{0.0};
   bool vertical_panels{false};
   bool split_inward{true};
+  int direction_degrees{0};
   float zoom{1.0F};
   float texture_zoom{1.0F};
   float offset_x{0.0F};

@@ -8,6 +8,10 @@ Ready-to-open diagnostic slides:
 - [Horizontal Split, opening](split-horizontal-outward.pdf)
 - [Vertical Split, closing](split-vertical-inward.pdf)
 - [Vertical Split, opening](split-vertical-outward.pdf)
+- Cover: [right](cover-right.pdf), [up](cover-up.pdf),
+  [left](cover-left.pdf), [down](cover-down.pdf)
+- Uncover: [right](uncover-right.pdf), [up](uncover-up.pdf),
+  [left](uncover-left.pdf), [down](uncover-down.pdf)
 
 From the repository root:
 
@@ -23,6 +27,9 @@ realistic Beamer showcase. Ordinary PDF viewers may ignore the transitions.
 
 Split opens or closes two perspective doors on fixed outer hinges. Horizontal
 uses top/bottom flaps; vertical uses left/right doors.
+Cover folds the incoming page over the old one; Uncover peels the old page away.
+Both use a single curved sheet. Names describe the PDF travel direction, not
+the hinge location; see the roadmap for the exact mapping.
 
 Regenerate all PDFs deterministically with Python's standard library:
 
