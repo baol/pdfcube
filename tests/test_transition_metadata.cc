@@ -2,11 +2,17 @@
 #include <cstdlib>
 
 int main(int argc, char** argv) {
-  if (argc != 3 && argc != 5) return EXIT_FAILURE;
+  if (argc != 3 && argc != 5 && argc != 6) return EXIT_FAILURE;
   pdfcube::Document document(argv[1]);
   const auto& page = document.page_info(1);
-  const bool split = argc == 5 && argv[3][0] == 'S';
-  return page.transition_type == (split ? POPPLER_PAGE_TRANSITION_SPLIT : POPPLER_PAGE_TRANSITION_BLINDS) &&
+  const bool split = argc >= 5 && argv[3][0] == 'S';
+  const bool cover = argc >= 5 && argv[3][0] == 'C';
+  const bool uncover = argc >= 5 && argv[3][0] == 'U';
+  const auto type = split ? POPPLER_PAGE_TRANSITION_SPLIT :
+                    cover ? POPPLER_PAGE_TRANSITION_COVER :
+                    uncover ? POPPLER_PAGE_TRANSITION_UNCOVER : POPPLER_PAGE_TRANSITION_BLINDS;
+  return page.transition_type == type &&
+         (argc != 6 || page.angle == std::atoi(argv[5])) &&
          (!split || page.direction == (argv[4][0] == 'O' ? POPPLER_PAGE_TRANSITION_OUTWARD :
                                                           POPPLER_PAGE_TRANSITION_INWARD)) &&
          page.alignment == (argv[2][0] == 'V' ? POPPLER_PAGE_TRANSITION_VERTICAL :

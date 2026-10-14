@@ -1,15 +1,18 @@
 """Generate small, valid, labeled PDFs without a PDF library."""
 from pathlib import Path
 
-EXAMPLES = [(f"blinds-{name}", "Blinds", axis, "I")
+EXAMPLES = [(f"blinds-{name}", "Blinds", axis, "I", None)
             for axis, name in (("H", "horizontal"), ("V", "vertical"))] + [
-    (f"split-{name}-{direction}", "Split", axis, motion)
+    (f"split-{name}-{direction}", "Split", axis, motion, None)
     for axis, name in (("H", "horizontal"), ("V", "vertical"))
-    for motion, direction in (("I", "inward"), ("O", "outward"))]
+    for motion, direction in (("I", "inward"), ("O", "outward"))] + [
+    (f"{effect.lower()}-{name}", effect, "H", "I", angle)
+    for effect in ("Cover", "Uncover")
+    for angle, name in ((0, "right"), (90, "up"), (180, "left"), (270, "down"))]
 
 
 def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),
-             effect="Blinds", motion="I"):
+             effect="Blinds", motion="I", angle=None):
     objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b""]
     objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
     kids = []
@@ -19,7 +22,8 @@ def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)
         kids.append(f"{page_id} 0 R")
         direction = f" /M /{motion}" if effect == "Split" and motion else ""
         alignment = f" /Dm /{orientation}" if orientation else ""
-        transition = f"/Dur 4 /Trans << /S /{effect}{alignment}{direction} /D 1.25 >>"
+        travel = f" /Di {angle}" if angle is not None else ""
+        transition = f"/Dur 4 /Trans << /S /{effect}{alignment}{direction}{travel} /D 1.25 >>"
         objects.append((
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width} {height}] "
             f"/Resources << /Font << /F1 3 0 R >> >> /Contents {page_id + 1} 0 R "
@@ -58,5 +62,5 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path, help="Directory for the example PDFs")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    for name, effect, orientation, motion in EXAMPLES:
-        make_pdf(args.output / f"{name}.pdf", orientation, effect=effect, motion=motion)
+    for name, effect, orientation, motion, angle in EXAMPLES:
+        make_pdf(args.output / f"{name}.pdf", orientation, effect=effect, motion=motion, angle=angle)

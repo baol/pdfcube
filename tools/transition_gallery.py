@@ -17,21 +17,24 @@ parser.add_argument("output", type=Path)
 parser.add_argument("--frames", type=int, default=33)
 parser.add_argument("--update-docs", action="store_true",
                     help="Refresh the checked-in contact sheets from these captures")
+parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover"),
+                    help="Capture only selected effects (default: all)")
 args = parser.parse_args()
 if args.frames < 5:
     parser.error("--frames must be at least 5")
 args.output.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1")
-for name, effect, orientation, motion in EXAMPLES:
+examples = [entry for entry in EXAMPLES if not args.effects or entry[1] in args.effects]
+for name, effect, orientation, motion, angle in examples:
     folder = args.output / name
     folder.mkdir(exist_ok=True)
     pdf = folder / "fixture.pdf"
-    make_pdf(pdf, orientation, effect=effect, motion=motion)
+    make_pdf(pdf, orientation, effect=effect, motion=motion, angle=angle)
     for i in range(args.frames):
         subprocess.run(["xvfb-run", "-a", str(args.binary.resolve()), "--no-fullscreen",
                         "--snapshot", str(folder / f"frame-{i:03}.png"),
                         "--snapshot-progress", str(i / (args.frames - 1)), str(pdf)],
-                       env=env, check=True, stdout=subprocess.DEVNULL)
+                       env=env, check=True, stdout=subprocess.DEVNULL, timeout=30)
     sheet = Image.new("RGB", (480 * 5, 380), "#202020")
     for column, fraction in enumerate((0, .25, .5, .75, 1)):
         frame = round(fraction * (args.frames - 1))
@@ -52,6 +55,7 @@ revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).stri
     "commit": revision,
     "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"])),
     "frames": args.frames, "backend": "X11",
+    "examples": [entry[0] for entry in examples],
     "renderer": "LIBGL_ALWAYS_SOFTWARE=1", "status": "candidate, not approved",
     "binary_version": subprocess.check_output([str(args.binary.resolve()), "--version"], text=True).strip(),
 }, indent=2) + "\n")
@@ -61,4 +65,4 @@ revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).stri
         f"<h2>{name}</h2><video controls loop muted width=720 src='{name}/transition.mp4'></video>"
         f"<p><a href='{name}/fixture.pdf'>Fixture PDF</a></p>"
         f"<img width=1200 src='{name}/contact-sheet.png'>"
-        for name, _, _, _ in EXAMPLES))
+        for name, _, _, _, _ in examples))
