@@ -21,6 +21,11 @@ Geometry is a function of progress, never an uncontrolled physics simulation.
 
 ## Blinds: experimental, awaiting visual approval
 
+Try the committed [horizontal](../../examples/transitions/blinds-horizontal.pdf)
+and [vertical](../../examples/transitions/blinds-vertical.pdf) PDFs in PDFCube;
+press Space to advance. [Example instructions](../../examples/transitions/README.md)
+include the regeneration command.
+
 Candidate captures from the software renderer, at 0%, 25%, 50%, 75%, and 100%:
 
 ![Horizontal rotating slats](blinds-horizontal.png)

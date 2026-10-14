@@ -40,3 +40,14 @@ def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)
         data.extend(f"{offset:010d} 00000 n \n".encode())
     data.extend(f"trailer\n<< /Root 1 0 R /Size {len(offsets)} >>\nstartxref\n{xref}\n%%EOF\n".encode())
     Path(path).write_bytes(data)
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("output", type=Path, help="Directory for the example PDFs")
+    args = parser.parse_args()
+    args.output.mkdir(parents=True, exist_ok=True)
+    for orientation, name in (("H", "horizontal"), ("V", "vertical")):
+        make_pdf(args.output / f"blinds-{name}.pdf", orientation)
