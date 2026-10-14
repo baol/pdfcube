@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -22,12 +23,24 @@ with tempfile.TemporaryDirectory() as directory:
 
     def capture(pdf, progress=None, *extra):
         output = root / "frame.png"
+        # Every invocation must create its own frame. Without this unlink, a
+        # remotely activated GtkApplication can make a later capture read the
+        # previous invocation's image and report a false pass.
+        output.unlink(missing_ok=True)
         command = [xvfb, "-a", binary, "--no-fullscreen", "--snapshot", str(output)]
         if progress is not None:
             command += ["--snapshot-progress", str(progress)]
         result = subprocess.run(command + list(extra) + [str(pdf)], env=environment,
                                 capture_output=True, timeout=30)
-        assert result.returncode == 0, result.stderr.decode(errors="replace")
+        details = (f"command: {shlex.join(command + list(extra) + [str(pdf)])}\n"
+                   f"stdout:\n{result.stdout.decode(errors='replace')}\n"
+                   f"stderr:\n{result.stderr.decode(errors='replace')}")
+        assert result.returncode == 0, f"snapshot command failed ({result.returncode})\n{details}"
+        assert output.is_file(), (
+            "snapshot command exited successfully but produced no PNG; "
+            "another GtkApplication instance may have claimed the fixed application ID\n"
+            + details
+        )
         return output.read_bytes()
 
     middles = []

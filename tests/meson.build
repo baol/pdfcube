@@ -102,5 +102,22 @@ if xvfb_run.found()
     timeout: 60,
     env: render_test_environment,
   )
+  dbus_run_session = find_program('dbus-run-session', required: false)
+  if dbus_run_session.found()
+    test(
+      'parallel snapshot isolation',
+      dbus_run_session,
+      args: [
+        python.full_path(),
+        files('test_snapshot_isolation.py'),
+        xvfb_run.full_path(),
+        pdfcube_exe,
+        files('fixture.pdf'),
+        files('fixture-wide.pdf'),
+      ],
+      timeout: 60,
+      env: render_test_environment,
+    )
+  endif
 endif
 

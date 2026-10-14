@@ -11,6 +11,7 @@ import zlib
 xvfb, binary, fixture, wide_fixture = map(pathlib.Path, sys.argv[1:5])
 
 def snapshot(path, *extra, home=None, skip_if_no_gl=False, document=fixture):
+    pathlib.Path(path).unlink(missing_ok=True)
     environment = os.environ.copy()
     environment["GDK_BACKEND"] = "x11"
     environment["LIBGL_ALWAYS_SOFTWARE"] = "1"
@@ -32,6 +33,11 @@ def snapshot(path, *extra, home=None, skip_if_no_gl=False, document=fixture):
             )
             raise SystemExit(77)
         raise AssertionError(result.stderr)
+    assert pathlib.Path(path).is_file(), (
+        "snapshot command exited successfully but produced no PNG; another "
+        "GtkApplication instance may have claimed the fixed application ID\n"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    )
     data = pathlib.Path(path).read_bytes()
     assert data.startswith(b"\x89PNG\r\n\x1a\n")
     return hashlib.sha256(data).hexdigest()
