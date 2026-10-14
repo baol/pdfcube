@@ -17,7 +17,7 @@ parser.add_argument("output", type=Path)
 parser.add_argument("--frames", type=int, default=33)
 parser.add_argument("--update-docs", action="store_true",
                     help="Refresh the checked-in contact sheets from these captures")
-parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover"),
+parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover", "Fly"),
                     help="Capture only selected effects (default: all)")
 args = parser.parse_args()
 if args.frames < 5:

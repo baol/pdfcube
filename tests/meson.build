@@ -1,5 +1,9 @@
 python = import('python').find_installation('python3')
 
+fly_test = executable('fly-test', files('test_fly.cc'),
+                      include_directories: include_directories('../src'))
+test('Fly leaf trajectory', fly_test)
+
 flip_test = executable('page-flip-test', files('test_page_flip.cc'),
                        include_directories: include_directories('../src'))
 test('page flip connected geometry', flip_test)
@@ -69,6 +73,16 @@ if xvfb_run.found()
       args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe,
              transition_metadata_test, effect],
       timeout: 240,
+      env: render_test_environment,
+    )
+  endforeach
+  foreach motion : ['I', 'O']
+    test(
+      'Fly rendering and PDF metadata ' + motion,
+      python,
+      args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe,
+             transition_metadata_test, 'Fly', motion],
+      timeout: 360,
       env: render_test_environment,
     )
   endforeach

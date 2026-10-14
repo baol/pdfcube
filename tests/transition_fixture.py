@@ -8,11 +8,16 @@ EXAMPLES = [(f"blinds-{name}", "Blinds", axis, "I", None)
     for motion, direction in (("I", "inward"), ("O", "outward"))] + [
     (f"{effect.lower()}-{name}", effect, "H", "I", angle)
     for effect in ("Cover", "Uncover")
-    for angle, name in ((0, "right"), (90, "up"), (180, "left"), (270, "down"))]
+    for angle, name in ((0, "right"), (90, "up"), (180, "left"), (270, "down"))] + [
+    (f"fly-{'in' if motion == 'I' else 'out'}-{name}", "Fly", "H", motion, angle)
+    for (angle, name), motion in zip(
+        ((0, "right"), (45, "up-right"), (90, "up"), (135, "up-left"),
+         (180, "left"), (225, "down-left"), (270, "down"), (315, "down-right")),
+        ("I", "O", "I", "O", "I", "O", "I", "O"))]
 
 
 def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),
-             effect="Blinds", motion="I", angle=None):
+             effect="Blinds", motion="I", angle=None, start_scale=.35, rectangular=True):
     objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b""]
     objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
     kids = []
@@ -20,10 +25,11 @@ def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)
         width, height = sizes[number]
         page_id = len(objects) + 1
         kids.append(f"{page_id} 0 R")
-        direction = f" /M /{motion}" if effect == "Split" and motion else ""
+        direction = f" /M /{motion}" if effect in ("Split", "Fly") and motion else ""
         alignment = f" /Dm /{orientation}" if orientation else ""
         travel = f" /Di {angle}" if angle is not None else ""
-        transition = f"/Dur 4 /Trans << /S /{effect}{alignment}{direction}{travel} /D 1.25 >>"
+        fly = f" /SS {start_scale} /B {'true' if rectangular else 'false'}" if effect == "Fly" else ""
+        transition = f"/Dur 4 /Trans << /S /{effect}{alignment}{direction}{travel}{fly} /D 1.25 >>"
         objects.append((
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width} {height}] "
             f"/Resources << /Font << /F1 3 0 R >> >> /Contents {page_id + 1} 0 R "

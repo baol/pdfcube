@@ -62,6 +62,15 @@ inline Matrix rotate_y(float radians) {
   return result;
 }
 
+inline Matrix rotate_z(float radians) {
+  Matrix result = Matrix::identity();
+  result.value[0] = std::cos(radians);
+  result.value[1] = std::sin(radians);
+  result.value[4] = -std::sin(radians);
+  result.value[5] = std::cos(radians);
+  return result;
+}
+
 inline Matrix perspective(float fov, float aspect, float near, float far) {
   Matrix result;
   const float tangent = std::tan(fov / 2.0F);

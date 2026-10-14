@@ -12,6 +12,11 @@ Ready-to-open diagnostic slides:
   [left](cover-left.pdf), [down](cover-down.pdf)
 - Uncover: [right](uncover-right.pdf), [up](uncover-up.pdf),
   [left](uncover-left.pdf), [down](uncover-down.pdf)
+- Fly inward: [right](fly-in-right.pdf), [up](fly-in-up.pdf),
+  [left](fly-in-left.pdf), [down](fly-in-down.pdf)
+- Fly outward: [upper right](fly-out-up-right.pdf),
+  [upper left](fly-out-up-left.pdf), [lower left](fly-out-down-left.pdf),
+  [lower right](fly-out-down-right.pdf)
 
 From the repository root:
 
@@ -30,6 +35,8 @@ uses top/bottom flaps; vertical uses left/right doors.
 Cover folds the incoming page over the old one; Uncover peels the old page away.
 Both use a single curved sheet. Names describe the PDF travel direction, not
 the hinge location; see the roadmap for the exact mapping.
+Fly drifts the page like a leaf along a shallow 3D arc, with a restrained bank
+and flutter that settle completely at the endpoint.
 
 Regenerate all PDFs deterministically with Python's standard library:
 

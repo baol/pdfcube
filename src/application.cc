@@ -126,6 +126,7 @@ void Application::open_document(const std::string& filename) {
           info.transition_type == POPPLER_PAGE_TRANSITION_SPLIT ? Transition::split :
           info.transition_type == POPPLER_PAGE_TRANSITION_COVER ? Transition::cover :
           info.transition_type == POPPLER_PAGE_TRANSITION_UNCOVER ? Transition::uncover :
+          info.transition_type == POPPLER_PAGE_TRANSITION_FLY ? Transition::fly :
           Transition::switch_page;
       durations_[static_cast<std::size_t>(page)] = info.duration_ms;
     }
@@ -165,7 +166,8 @@ void Application::configure_program() {
           effect == "blinds" ? Transition::blinds :
           effect == "split" ? Transition::split :
           effect == "cover" ? Transition::cover :
-          effect == "uncover" ? Transition::uncover : Transition::switch_page;
+          effect == "uncover" ? Transition::uncover :
+          effect == "fly" ? Transition::fly : Transition::switch_page;
     }
     cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
     transitions_[(page + 1) % document_->page_count()] = last_transition;
@@ -262,6 +264,9 @@ FrameState Application::frame_state() const {
   if (document_) state.split_inward =
       document_->page_info(next_page_).direction == POPPLER_PAGE_TRANSITION_INWARD;
   if (document_) state.direction_degrees = document_->page_info(next_page_).angle;
+  if (document_) state.fly_scale = document_->page_info(next_page_).scale;
+  if (document_) state.fly_inward =
+      document_->page_info(next_page_).direction == POPPLER_PAGE_TRANSITION_INWARD;
   if (page_effect(transition_)) return state;
   double progress = zoom_animating_ ? std::clamp(
       (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
