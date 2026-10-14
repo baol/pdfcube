@@ -1,8 +1,15 @@
 """Generate small, valid, labeled PDFs without a PDF library."""
 from pathlib import Path
 
+EXAMPLES = [(f"blinds-{name}", "Blinds", axis, "I")
+            for axis, name in (("H", "horizontal"), ("V", "vertical"))] + [
+    (f"split-{name}-{direction}", "Split", axis, motion)
+    for axis, name in (("H", "horizontal"), ("V", "vertical"))
+    for motion, direction in (("I", "inward"), ("O", "outward"))]
 
-def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)):
+
+def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),
+             effect="Blinds", motion="I"):
     objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b""]
     objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
     kids = []
@@ -10,7 +17,9 @@ def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)
         width, height = sizes[number]
         page_id = len(objects) + 1
         kids.append(f"{page_id} 0 R")
-        transition = f"/Dur 4 /Trans << /S /Blinds /Dm /{orientation} /D 1.25 >>"
+        direction = f" /M /{motion}" if effect == "Split" and motion else ""
+        alignment = f" /Dm /{orientation}" if orientation else ""
+        transition = f"/Dur 4 /Trans << /S /{effect}{alignment}{direction} /D 1.25 >>"
         objects.append((
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width} {height}] "
             f"/Resources << /Font << /F1 3 0 R >> >> /Contents {page_id + 1} 0 R "
@@ -49,5 +58,5 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path, help="Directory for the example PDFs")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    for orientation, name in (("H", "horizontal"), ("V", "vertical")):
-        make_pdf(args.output / f"blinds-{name}.pdf", orientation)
+    for name, effect, orientation, motion in EXAMPLES:
+        make_pdf(args.output / f"{name}.pdf", orientation, effect=effect, motion=motion)

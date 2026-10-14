@@ -2,6 +2,7 @@
 
 #include "math.hpp"
 #include "blinds.hpp"
+#include "split.hpp"
 
 #include <algorithm>
 #include <array>
@@ -405,8 +406,9 @@ void Renderer::render(int width, int height, const FrameState& frame) {
 
   glUniform4f(uv_rect_uniform_, 0, 0, 1, 1);
   glUniform1f(shade_uniform_, 1);
-  const bool landed_blinds = frame.transition == Transition::blinds && frame.progress >= 1;
-  const auto& page = document_.page_info(landed_blinds ? frame.next_page : frame.current_page);
+  const bool panels = frame.transition == Transition::blinds || frame.transition == Transition::split;
+  const bool landed = panels && frame.progress >= 1;
+  const auto& page = document_.page_info(landed ? frame.next_page : frame.current_page);
   const Viewport viewport = content_viewport(width, height, page.width / page.height);
   glViewport(viewport.x, viewport.y, viewport.width, viewport.height);
   const int viewport_texture_size = std::max(viewport.width, viewport.height);
@@ -417,7 +419,7 @@ void Renderer::render(int width, int height, const FrameState& frame) {
   const Matrix zoom = translate(frame.offset_x, frame.offset_y, 0.0F) *
                       scale(frame.zoom, frame.zoom, 1.0F);
 
-  if (frame.transition == Transition::blinds) {
+  if (panels) {
     // Prepare both full-resolution pages before any moving geometry is drawn.
     const auto page_size = [&](int index) {
       const auto& info = document_.page_info(index);
@@ -427,8 +429,40 @@ void Renderer::render(int width, int height, const FrameState& frame) {
     texture_for_page(frame.current_page, page_size(frame.current_page));
     texture_for_page(frame.next_page, page_size(frame.next_page));
     if (frame.progress <= 0 || frame.progress >= 1) {
-      draw_page(landed_blinds ? frame.next_page : frame.current_page,
+      draw_page(landed ? frame.next_page : frame.current_page,
                 texture_size, Matrix::identity().value.data());
+      return;
+    }
+    if (frame.transition == Transition::split) {
+      const int base = frame.split_inward ? frame.current_page : frame.next_page;
+      const int doors = frame.split_inward ? frame.next_page : frame.current_page;
+      const auto fit_page = [&](int index) {
+        const auto& info = document_.page_info(index);
+        return content_viewport(width, height, info.width / info.height);
+      };
+      const auto base_fit = fit_page(base);
+      glViewport(base_fit.x, base_fit.y, base_fit.width, base_fit.height);
+      draw_page(base, page_size(base), translate(0, 0, .999F).value.data());
+      const auto fit = fit_page(doors);
+      glViewport(fit.x, fit.y, fit.width, fit.height);
+      // Clip opening doors to their page, never into the letterboxing.
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(fit.x, fit.y, fit.width, fit.height);
+      constexpr float camera = 4;
+      // At atan(camera) each door is edge-on to the viewer at its outer hinge.
+      const float angle = split_angle(frame.progress, frame.split_inward);
+      const Matrix view = perspective(2 * std::atan(1 / camera), 1, .5F, 10) *
+                          translate(0, 0, -camera);
+      for (int i = 0; i < 2; ++i) {
+        const Matrix model = split_door(frame.vertical_panels, i, angle);
+        if (frame.vertical_panels)
+          glUniform4f(uv_rect_uniform_, i * .5F, 0, .5F, 1);
+        else
+          glUniform4f(uv_rect_uniform_, 0, i * .5F, 1, .5F);
+        glUniform1f(shade_uniform_, .7F + .3F * std::cos(angle));
+        draw_page(doors, page_size(doors), (view * model).value.data());
+      }
+      glDisable(GL_SCISSOR_TEST);
       return;
     }
     // Different page ratios get their own fitted viewport. Their slat gaps
@@ -443,10 +477,10 @@ void Renderer::render(int width, int height, const FrameState& frame) {
       const float fraction = 1.0F / blinds_count;
       const float center = -1 + (2 * i + 1) * fraction;
       const float rotation = back ? angle - pi : angle;
-      const Matrix model = frame.vertical_blinds
+      const Matrix model = frame.vertical_panels
           ? translate(center, 0, 0) * rotate_y(rotation) * scale(fraction, 1, 1)
           : translate(0, -center, 0) * rotate_x(rotation) * scale(1, fraction, 1);
-      if (frame.vertical_blinds)
+      if (frame.vertical_panels)
         glUniform4f(uv_rect_uniform_, i * fraction, 0, fraction, 1);
       else
         glUniform4f(uv_rect_uniform_, 0, i * fraction, 1, fraction);

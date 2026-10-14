@@ -3,6 +3,8 @@
 The [transition roadmap and review gallery](docs/transitions/README.md) describes
 new effects, their validation gates, and how to generate videos and contact sheets.
 Ready-to-open [example PDFs](examples/transitions/README.md) are included.
+Blinds uses cascading slats; Split uses opening/closing 3D doors. Both have
+reproducible screenshots and review videos linked from the roadmap.
 
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 
