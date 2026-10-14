@@ -14,6 +14,13 @@ struct PageInfo {
   double height{};
   bool cube_transition{false};
   int duration_ms{0};
+  PopplerPageTransitionType transition_type{POPPLER_PAGE_TRANSITION_REPLACE};
+  PopplerPageTransitionAlignment alignment{POPPLER_PAGE_TRANSITION_HORIZONTAL};
+  PopplerPageTransitionDirection direction{POPPLER_PAGE_TRANSITION_INWARD};
+  double transition_seconds{0.0};
+  int angle{0};
+  double scale{1.0};
+  bool rectangular{false};
 };
 
 struct SurfaceDeleter {

@@ -1,6 +1,7 @@
 #include "renderer.hpp"
 
 #include "math.hpp"
+#include "blinds.hpp"
 
 #include <algorithm>
 #include <array>
@@ -99,10 +100,11 @@ const char* desktop_vertex_shader = R"(
 in vec3 position;
 in vec2 texture_coordinate;
 uniform mat4 transform;
+uniform vec4 uv_rect;
 out vec2 uv;
 void main() {
   gl_Position = transform * vec4(position, 1.0);
-  uv = texture_coordinate;
+  uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
 }
 )";
 
@@ -112,9 +114,11 @@ in vec2 uv;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
 uniform bool textured;
+uniform float shade;
 out vec4 output_color;
 void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
+  output_color.rgb *= shade;
 }
 )";
 
@@ -124,10 +128,11 @@ precision highp float;
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 texture_coordinate;
 uniform mat4 transform;
+uniform vec4 uv_rect;
 out vec2 uv;
 void main() {
   gl_Position = transform * vec4(position, 1.0);
-  uv = texture_coordinate;
+  uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
 }
 )";
 
@@ -138,9 +143,11 @@ in vec2 uv;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
 uniform bool textured;
+uniform float shade;
 out vec4 output_color;
 void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
+  output_color.rgb *= shade;
 }
 )";
 
@@ -235,6 +242,8 @@ void Renderer::initialize() {
   glEnableVertexAttribArray(1);
 
   matrix_uniform_ = glGetUniformLocation(program_, "transform");
+  uv_rect_uniform_ = glGetUniformLocation(program_, "uv_rect");
+  shade_uniform_ = glGetUniformLocation(program_, "shade");
   texture_uniform_ = glGetUniformLocation(program_, "page_texture");
   color_uniform_ = glGetUniformLocation(program_, "solid_color");
   textured_uniform_ = glGetUniformLocation(program_, "textured");
@@ -394,7 +403,10 @@ void Renderer::render(int width, int height, const FrameState& frame) {
   glUseProgram(program_);
   glBindVertexArray(vao_);
 
-  const auto& page = document_.page_info(frame.current_page);
+  glUniform4f(uv_rect_uniform_, 0, 0, 1, 1);
+  glUniform1f(shade_uniform_, 1);
+  const bool landed_blinds = frame.transition == Transition::blinds && frame.progress >= 1;
+  const auto& page = document_.page_info(landed_blinds ? frame.next_page : frame.current_page);
   const Viewport viewport = content_viewport(width, height, page.width / page.height);
   glViewport(viewport.x, viewport.y, viewport.width, viewport.height);
   const int viewport_texture_size = std::max(viewport.width, viewport.height);
@@ -404,6 +416,46 @@ void Renderer::render(int width, int height, const FrameState& frame) {
                                 std::max({1.0F, frame.zoom, frame.texture_zoom}))));
   const Matrix zoom = translate(frame.offset_x, frame.offset_y, 0.0F) *
                       scale(frame.zoom, frame.zoom, 1.0F);
+
+  if (frame.transition == Transition::blinds) {
+    // Prepare both full-resolution pages before any moving geometry is drawn.
+    const auto page_size = [&](int index) {
+      const auto& info = document_.page_info(index);
+      const auto fit = content_viewport(width, height, info.width / info.height);
+      return std::min(maximum_texture_size_, std::max(fit.width, fit.height));
+    };
+    texture_for_page(frame.current_page, page_size(frame.current_page));
+    texture_for_page(frame.next_page, page_size(frame.next_page));
+    if (frame.progress <= 0 || frame.progress >= 1) {
+      draw_page(landed_blinds ? frame.next_page : frame.current_page,
+                texture_size, Matrix::identity().value.data());
+      return;
+    }
+    // Different page ratios get their own fitted viewport. Their slat gaps
+    // expose the configured background; neither page is stretched.
+    for (int i = 0; i < blinds_count; ++i) {
+      const float angle = blinds_angle(i, frame.progress);
+      const bool back = angle > pi / 2;
+      const int index = back ? frame.next_page : frame.current_page;
+      const auto& info = document_.page_info(index);
+      const auto fit = content_viewport(width, height, info.width / info.height);
+      glViewport(fit.x, fit.y, fit.width, fit.height);
+      const float fraction = 1.0F / blinds_count;
+      const float center = -1 + (2 * i + 1) * fraction;
+      const float rotation = back ? angle - pi : angle;
+      const Matrix model = frame.vertical_blinds
+          ? translate(center, 0, 0) * rotate_y(rotation) * scale(fraction, 1, 1)
+          : translate(0, -center, 0) * rotate_x(rotation) * scale(1, fraction, 1);
+      if (frame.vertical_blinds)
+        glUniform4f(uv_rect_uniform_, i * fraction, 0, fraction, 1);
+      else
+        glUniform4f(uv_rect_uniform_, 0, i * fraction, 1, fraction);
+      glUniform1f(shade_uniform_, .65F + .35F * std::abs(std::cos(angle)));
+      draw_page(index, page_size(index),
+                model.value.data());
+    }
+    return;
+  }
 
   if (frame.transition == Transition::none || frame.transition == Transition::switch_page) {
     draw_page(frame.current_page, texture_size, zoom.value.data());

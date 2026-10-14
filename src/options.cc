@@ -64,7 +64,7 @@ ParseResult parse_options(int argc, char** argv) {
       ("demo", po::value<bool>()->implicit_value(true),
        "Auto-advance using PDF or programmed durations.")
       ("program", po::value<std::string>(),
-       "Transition program duration:type pairs, for example 5:c:3:p.")
+       "Transition program duration:type pairs (c, p, blinds), for example 5:c:3:p.")
       ("no-fullscreen,n", po::value<bool>()->implicit_value(true),
        "Do not start in full-screen mode.");
 
@@ -137,6 +137,7 @@ ParseResult parse_options(int argc, char** argv) {
       result.options.snapshot = selected->as<std::string>();
     }
     if (const auto* selected = value("snapshot-progress")) {
+      result.options.snapshot_transition = true;
       result.options.snapshot_progress = selected->as<double>();
     }
     result.options.snapshot_progress =

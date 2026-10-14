@@ -18,6 +18,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential meson ninja-build python3 xvfb xauth mesa-utils \
+            python3-pil ffmpeg \
             libgl1-mesa-dri \
             libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
             libboost-program-options-dev appstream desktop-file-utils \
@@ -28,6 +29,15 @@ jobs:
         run: meson compile -C build
       - name: Test
         run: meson test -C build --print-errorlogs
+      - name: Capture transition review gallery
+        env:
+          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1:abort_on_error=1
+        run: python3 tools/transition_gallery.py build/src/pdfcube build/transition-gallery
+      - uses: actions/upload-artifact@v4
+        with:
+          name: transition-review
+          path: build/transition-gallery/
+          if-no-files-found: error
       - name: Validate desktop metadata
         run: |
           desktop-file-validate org.pdfcube.pdfcube.desktop

@@ -14,13 +14,14 @@
 
 namespace pdfcube {
 
-enum class Transition { none, cube_forward, cube_backward, switch_page };
+enum class Transition { none, cube_forward, cube_backward, switch_page, blinds };
 
 struct FrameState {
   int current_page{0};
   int next_page{0};
   Transition transition{Transition::none};
   double progress{0.0};
+  bool vertical_blinds{false};
   float zoom{1.0F};
   float texture_zoom{1.0F};
   float offset_x{0.0F};
@@ -75,6 +76,8 @@ class Renderer {
   GLint texture_uniform_{-1};
   GLint color_uniform_{-1};
   GLint textured_uniform_{-1};
+  GLint uv_rect_uniform_{-1};
+  GLint shade_uniform_{-1};
   GLint maximum_texture_size_{0};
   std::vector<PageTexture> textures_;
   std::vector<PreparedPage> prepared_pages_;

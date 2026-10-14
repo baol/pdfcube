@@ -13,6 +13,12 @@ rendered with Poppler and Cairo and displayed through GTK 4 and OpenGL.
 .PP
 If no PDF file is supplied, a file chooser is displayed.
 .SH OPTIONS
+.PP
+PDF Blinds transitions are rendered as cascading rotating slats, horizontally
+or vertically according to the document. PDF Box retains the cube effect.
+Other unsupported PDF transitions currently change pages instantly.
+PDF transition duration controls the animation; page duration controls how
+long automatic playback displays a slide. These are separate values.
 .TP
 .BR \-h ", " \-\-help
 Display command-line help and exit.
@@ -30,7 +36,7 @@ Set the cube cap color. Each component is a number from 0.0 to 1.0.
 Start in a window instead of fullscreen mode.
 .TP
 .B \-\-demo
-Automatically advance slides using PDF transition durations or the program
+Automatically advance slides using PDF page display durations or the program
 specified with
 .BR \-\-program .
 .TP
@@ -39,7 +45,10 @@ Set slide durations and following transition types. Durations are in seconds;
 .B c
 selects a cube transition and
 .B p
-selects a plain transition. The last pair is repeated for remaining slides.
+selects a plain transition.
+.B blinds
+selects rotating slats with a 750 ms animation.
+The last pair is repeated for remaining slides.
 For example,
 .B \-\-program 5:c:3:p
 uses five seconds followed by a cube, then three seconds followed by a plain

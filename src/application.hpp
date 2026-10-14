@@ -34,7 +34,7 @@ class Application {
   void open_document(const std::string& filename);
   void configure_program();
   void jump_to_section(int section);
-  void start_page_change(int delta, bool cube);
+  void start_page_change(int delta, bool cube, bool programmed = false);
   void toggle_zoom(ZoomRegion region);
   void reset_zoom();
   void schedule_auto_advance(bool allow_immediate = false);
@@ -50,11 +50,14 @@ class Application {
   std::unique_ptr<Document> document_;
   std::unique_ptr<Renderer> renderer_;
   std::vector<bool> cube_transitions_;
+  std::vector<Transition> transitions_;
   std::vector<int> durations_;
   int current_page_{0};
   int next_page_{0};
   Transition transition_{Transition::none};
   gint64 transition_started_{0};
+  gint64 transition_length_us_{750000};
+  bool transition_preparing_{false};
   ZoomRegion zoom_region_{ZoomRegion::none};
   bool zoom_reversing_{false};
   bool zoom_animating_{false};

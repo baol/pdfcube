@@ -43,9 +43,19 @@ Document::Document(const std::string& filename) {
     PopplerPage* page = poppler_document_get_page(document_, index);
     PageInfo info;
     poppler_page_get_size(page, &info.width, &info.height);
+    const double display_seconds = poppler_page_get_duration(page);
+    if (std::isfinite(display_seconds) && display_seconds > 0)
+      info.duration_ms = static_cast<int>(std::min(display_seconds, 86400.0) * 1000);
     if (PopplerPageTransition* transition = poppler_page_get_transition(page)) {
       info.cube_transition = transition->type == POPPLER_PAGE_TRANSITION_BOX;
-      info.duration_ms = std::max(0, transition->duration * 1000);
+      info.transition_type = transition->type;
+      info.alignment = transition->alignment;
+      info.direction = transition->direction;
+      info.transition_seconds = std::isfinite(transition->duration_real)
+          ? std::clamp(transition->duration_real, 0.0, 86400.0) : 1.0;
+      info.angle = transition->angle;
+      info.scale = transition->scale;
+      info.rectangular = transition->rectangular;
       poppler_page_transition_free(transition);
     }
     pages_.push_back(info);
