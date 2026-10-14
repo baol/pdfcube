@@ -4,6 +4,7 @@
 #include "blinds.hpp"
 #include "split.hpp"
 #include "page_flip.hpp"
+#include "fly.hpp"
 
 #include <algorithm>
 #include <array>
@@ -436,9 +437,11 @@ void Renderer::render(int width, int height, const FrameState& frame) {
     }
     if (frame.transition != Transition::blinds) {
       const bool split = frame.transition == Transition::split;
+      const bool fly = frame.transition == Transition::fly;
       const bool cover = split ? frame.split_inward : frame.transition == Transition::cover;
-      const int base = cover ? frame.current_page : frame.next_page;
-      const int sheet = cover ? frame.next_page : frame.current_page;
+      const bool incoming = fly ? frame.fly_inward : cover;
+      const int base = incoming ? frame.current_page : frame.next_page;
+      const int sheet = incoming ? frame.next_page : frame.current_page;
       const auto fit_page = [&](int index) {
         const auto& info = document_.page_info(index);
         return content_viewport(width, height, info.width / info.height);
@@ -448,11 +451,18 @@ void Renderer::render(int width, int height, const FrameState& frame) {
       draw_page(base, page_size(base), translate(0, 0, .999F).value.data());
       const auto fit = fit_page(sheet);
       glViewport(fit.x, fit.y, fit.width, fit.height);
-      glEnable(GL_SCISSOR_TEST);
-      glScissor(fit.x, fit.y, fit.width, fit.height);
+      if (!fly) {
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(fit.x, fit.y, fit.width, fit.height);
+      }
       const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
                           translate(0, 0, -flip_camera);
-      if (split) {
+      if (fly) {
+        const FlyPose pose = fly_pose(frame.progress, frame.fly_inward,
+                                      frame.direction_degrees, frame.fly_scale);
+        glUniform1f(shade_uniform_, pose.shade);
+        draw_page(sheet, page_size(sheet), (view * pose.model).value.data());
+      } else if (split) {
         const float angle = split_angle(frame.progress, frame.split_inward);
         for (int i = 0; i < 2; ++i) {
           const Matrix model = split_door(frame.vertical_panels, i, angle);
@@ -470,7 +480,7 @@ void Renderer::render(int width, int height, const FrameState& frame) {
           draw_page(sheet, page_size(sheet), (view * strip.model).value.data());
         }
       }
-      glDisable(GL_SCISSOR_TEST);
+      if (!fly) glDisable(GL_SCISSOR_TEST);
       return;
     }
     // Different page ratios get their own fitted viewport. Their slat gaps

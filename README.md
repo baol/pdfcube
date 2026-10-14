@@ -6,6 +6,8 @@ Ready-to-open [example PDFs](examples/transitions/README.md) are included.
 Blinds uses cascading slats; Split uses opening/closing 3D doors;
 Cover/Uncover use curved page flips in all four directions. These have
 reproducible screenshots and review videos linked from the roadmap.
+Fly adds a controlled leaf-like drift in arbitrary PDF directions, with the
+same reproducible review assets.
 
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 

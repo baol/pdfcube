@@ -9,7 +9,7 @@ review, to accepted; a passing build is not visual approval.
 | 1 | Blinds | Twelve rotating louvers, cascading across the page | Both axes, readable reverse faces, seamless endpoints |
 | 2 | Split | Perspective double doors on fixed outer hinges | Both axes, opening/closing, seamless endpoints |
 | 3 | Cover / Uncover | Flexible page flips | Curvature, correct front/back mapping |
-| 4 | Fly | Flying sheet of paper | Direction, scale, controlled landing |
+| 4 | Fly | A page drifting like a leaf on a controlled gust | Direction, scale, readable flight, controlled landing |
 | 5 | Push | Cube pushes a soft cube | Deterministic contact and recovery |
 | 6 | Dissolve / Glitter | Textured particles / flare and sparks | Stable randomness, bounded memory and brightness |
 | 7 | Wipe / Fade / Replace | Physical wiper / crossfade / instant | Direction, clean endpoints |
@@ -109,6 +109,36 @@ Other Cover directions: [up](cover-up.png), [left](cover-left.png),
 [up](uncover-up.png), [down](uncover-down.png).
 Each direction also has a video in the generated review bundle.
 
+## Fly: experimental, awaiting visual approval
+
+Fly treats the moving page as a light sheet caught by a controlled gust. It
+follows a shallow 3D arc, banks into its path, adds one small deterministic
+flutter, then progressively loses both motions and lands exactly flat. Incoming
+(`/M /I`) pages travel from beyond the opposite edge in the PDF `/Di` direction;
+outgoing (`/M /O`) pages leave in that direction. Arbitrary angles are supported,
+including the eight compass directions used by the examples.
+
+`/SS` sets the off-screen start/end scale; valid values are greater than zero
+and at most one, with invalid values conservatively treated as one. `/B` metadata
+is retained. PDF pages are rendered against their normal opaque white page
+background, so `/B` does not erase actual page artwork. The moving page may pass
+through the letterbox area, but its aspect ratio never changes. Both pages are
+prepared at full output resolution before the animation clock starts, and the
+static endpoints bypass animated geometry.
+
+The [eight example PDFs](../../examples/transitions/README.md) alternate inward
+and outward motion while covering every 45-degree direction. Representative
+captures:
+
+![Fly inward to the right](fly-in-right.png)
+
+![Fly outward toward the upper right](fly-out-up-right.png)
+
+The other six direction captures and all eight videos are in the same gallery.
+`--program duration:fly` uses the destination PDF's direction, scale and motion
+with the normal 750 ms programmed duration. Explicit cube and instant keys are
+unchanged.
+
 ## Reproduce the review bundle
 
 Install Pillow and ffmpeg in addition to the normal build/test dependencies:
@@ -140,13 +170,15 @@ same process and add their own fixtures and gallery entry.
 
 ## Validation record
 
-Blinds, Split and Cover/Uncover: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
-Xvfb/software OpenGL. All thirteen tests passed with warnings treated as errors,
+Blinds, Split, Cover/Uncover and Fly: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
+Xvfb/software OpenGL. All sixteen tests passed with warnings treated as errors,
 both normally and with address/undefined-behavior sanitizers.
 The horizontal and vertical contact sheets were inspected for direction and
 readable reverse faces. Page-flip captures were inspected for curvature,
 direction and readable text; a Split midpoint still matched the previous
-capture byte-for-byte. This is not yet native-platform or motion approval.
+capture byte-for-byte. Fly contact sheets were inspected for direction,
+readable text, restrained
+flutter and a flat landing. This is not yet native-platform or motion approval.
 
 - Automated: PDF metadata (fractional animation duration distinct from dwell),
   both axes, portrait/landscape/mixed dimensions, deterministic midpoint,
@@ -158,6 +190,9 @@ capture byte-for-byte. This is not yet native-platform or motion approval.
 - Cover/Uncover checks cover connected curvature, reversible geometry, fixed
   hinges, unmirrored flat UV mapping, edge-on finish, all four PDF directions,
   omitted/invalid angle fallback, program selection and reproducible example PDFs.
+- Fly checks cover all eight compass directions, inward/outward reversibility,
+  bounded height and monotonic landing, `/SS` validation, PDF metadata, program
+  selection, deterministic rendering, exact endpoints and reproducible examples.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
   native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback
   memory checks. Still-frame and geometry checks are not substitutes for these.
