@@ -14,14 +14,15 @@
 
 namespace pdfcube {
 
-enum class Transition { none, cube_forward, cube_backward, switch_page, blinds };
+enum class Transition { none, cube_forward, cube_backward, switch_page, blinds, split };
 
 struct FrameState {
   int current_page{0};
   int next_page{0};
   Transition transition{Transition::none};
   double progress{0.0};
-  bool vertical_blinds{false};
+  bool vertical_panels{false};
+  bool split_inward{true};
   float zoom{1.0F};
   float texture_zoom{1.0F};
   float offset_x{0.0F};

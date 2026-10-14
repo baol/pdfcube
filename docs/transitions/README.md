@@ -7,7 +7,7 @@ review, to accepted; a passing build is not visual approval.
 | Order | Effect | Interpretation | Acceptance focus |
 | --- | --- | --- | --- |
 | 1 | Blinds | Twelve rotating louvers, cascading across the page | Both axes, readable reverse faces, seamless endpoints |
-| 2 | Split | Panels separating or joining | Both axes and inward/outward motion |
+| 2 | Split | Perspective double doors on fixed outer hinges | Both axes, opening/closing, seamless endpoints |
 | 3 | Cover / Uncover | Flexible page flips | Curvature, correct front/back mapping |
 | 4 | Fly | Flying sheet of paper | Direction, scale, controlled landing |
 | 5 | Push | Cube pushes a soft cube | Deterministic contact and recovery |
@@ -47,6 +47,33 @@ conflation of those fields. Nonpositive animation duration means instant change.
 Existing --program duration:c and duration:p remain supported; duration:blinds
 selects Blinds with the existing 750 ms programmed animation duration.
 
+## Split: experimental, awaiting visual approval
+
+Split uses two rigid, thin doors with perspective and restrained angular shading.
+PDF `/Dm /V` selects left/right doors; `/Dm /H` selects top/bottom flaps.
+`/M /O` opens the outgoing slide to reveal the destination; `/M /I` closes the
+incoming slide over the old one. The outer edges are fixed hinges. Motion eases
+in and out, ending edge-on when open, without mirrored text or a camera jump.
+There is no physical thickness or cast shadow. Doors are clipped to their page;
+different page ratios are independently fitted, never stretched.
+
+Try all four [committed example PDFs](../../examples/transitions/README.md).
+These captures use the same generated PDFs as the tests and review videos:
+
+![Horizontal closing doors](split-horizontal-inward.png)
+
+![Horizontal opening doors](split-horizontal-outward.png)
+
+![Vertical closing doors](split-vertical-inward.png)
+
+![Vertical opening doors](split-vertical-outward.png)
+
+The PDF animation duration is respected. `--program duration:split` selects
+Split with a 750 ms animation, using the destination PDF's axis and direction
+(PDF defaults: horizontal, inward). Explicit cube and instant keys are unchanged.
+Both full-resolution pages are prepared before the animation clock starts.
+At 0% and 100% the renderer draws the exact static source/destination page.
+
 ## Reproduce the review bundle
 
 Install Pillow and ffmpeg in addition to the normal build/test dependencies:
@@ -58,7 +85,10 @@ meson test -C build --print-errorlogs
 python3 tools/transition_gallery.py build/src/pdfcube build/transition-gallery
 ```
 
-Open build/transition-gallery/index.html. Each orientation has a looping video,
+Add `--update-docs` to regenerate the checked-in contact sheets from those same
+captures. The default 33 samples include exact quarter-progress frames.
+
+Open build/transition-gallery/index.html. Each effect/axis/direction has a looping video,
 five-frame contact sheet, full-resolution individual frames, and its input PDF.
 The manifest records the source revision and binary version. Rebuild first;
 captures must come from the revision under review. CI uploads this bundle on
@@ -71,8 +101,8 @@ same process and add their own fixtures and gallery entry.
 
 ## Validation record
 
-Initial implementation: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
-Xvfb/software OpenGL. All seven tests passed with warnings treated as errors,
+Blinds and Split: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
+Xvfb/software OpenGL. All ten tests passed with warnings treated as errors,
 both normally and with address/undefined-behavior sanitizers.
 The horizontal and vertical contact sheets were inspected for direction and
 readable reverse faces. This is not yet native-platform or motion approval.
@@ -80,9 +110,13 @@ readable reverse faces. This is not yet native-platform or motion approval.
 - Automated: PDF metadata (fractional animation duration distinct from dwell),
   both axes, portrait/landscape/mixed dimensions, deterministic midpoint,
   byte-identical start/end renders compared with static pages.
+- Split: fixed hinges and edge-on finish, reversible monotonic geometry,
+  both directions, default PDF parameters, program selection, and reproducible
+  committed PDFs. The gallery includes all four Split parameter combinations.
 - Existing cube, zoom, document resolution, CLI and navigation tests remain required.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
-  native Wayland/NVIDIA, X11, Windows and macOS playback.
+  native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback
+  memory checks. Still-frame and geometry checks are not substitutes for these.
 - Captures use software OpenGL; they do not establish hardware performance.
 
 For every new effect, add parameter/default/invalid-value coverage, sampled

@@ -1,5 +1,9 @@
 python = import('python').find_installation('python3')
 
+split_test = executable('split-test', files('test_split.cc'),
+                        include_directories: include_directories('../src'))
+test('split hinged geometry', split_test)
+
 test(
   'version derivation',
   python,
@@ -54,10 +58,20 @@ transition_metadata_test = executable(
 if xvfb_run.found()
   render_test_environment = environment()
   render_test_environment.set('ASAN_OPTIONS', 'detect_leaks=0:halt_on_error=1:abort_on_error=1')
+  foreach motion : ['I', 'O']
+    test(
+      'split rendering and PDF metadata ' + motion,
+      python,
+      args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe,
+             transition_metadata_test, 'Split', motion],
+      timeout: 120,
+      env: render_test_environment,
+    )
+  endforeach
   test(
     'blinds rendering and PDF metadata',
     python,
-    args: [files('test_blinds.py'), xvfb_run.full_path(), pdfcube_exe, transition_metadata_test],
+    args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe, transition_metadata_test],
     timeout: 120,
     env: render_test_environment,
   )

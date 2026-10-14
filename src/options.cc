@@ -64,7 +64,7 @@ ParseResult parse_options(int argc, char** argv) {
       ("demo", po::value<bool>()->implicit_value(true),
        "Auto-advance using PDF or programmed durations.")
       ("program", po::value<std::string>(),
-       "Transition program duration:type pairs (c, p, blinds), for example 5:c:3:p.")
+       "Transition program duration:type pairs (c, p, blinds, split), for example 5:c:3:p.")
       ("no-fullscreen,n", po::value<bool>()->implicit_value(true),
        "Do not start in full-screen mode.");
 
