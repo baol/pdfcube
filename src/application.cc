@@ -116,17 +116,23 @@ void Application::open_document(const std::string& filename) {
   try {
     document_ = std::make_unique<Document>(filename);
     cube_transitions_.resize(static_cast<std::size_t>(document_->page_count()));
+    transitions_.resize(static_cast<std::size_t>(document_->page_count()));
     durations_.resize(static_cast<std::size_t>(document_->page_count()));
     for (int page = 0; page < document_->page_count(); ++page) {
       const PageInfo& info = document_->page_info(page);
       cube_transitions_[static_cast<std::size_t>(page)] = info.cube_transition;
+      transitions_[page] = info.cube_transition ? Transition::cube_forward :
+          info.transition_type == POPPLER_PAGE_TRANSITION_BLINDS ? Transition::blinds :
+          Transition::switch_page;
       durations_[static_cast<std::size_t>(page)] = info.duration_ms;
     }
     configure_program();
-    if (!options_.snapshot.empty() && options_.snapshot_progress > 0.0 &&
+    if (!options_.snapshot.empty() && options_.snapshot_transition &&
         document_->page_count() > 1) {
       next_page_ = 1;
-      transition_ = cube_transitions_[1] ? Transition::cube_forward : Transition::switch_page;
+      transition_ = transitions_[1];
+      if (transition_ == Transition::switch_page && options_.snapshot_progress <= 0)
+        transition_ = Transition::none;
       transition_started_ = g_get_monotonic_time();
     }
     gtk_gl_area_queue_render(GTK_GL_AREA(area_));
@@ -145,17 +151,24 @@ void Application::configure_program() {
   int page = 0;
   int last_duration = 0;
   bool last_cube = false;
+  Transition last_transition = Transition::switch_page;
   while (page < document_->page_count() && std::getline(input, duration, ':')) {
     if (duration.empty()) break;
     last_duration = std::max(0, static_cast<int>(std::stod(duration) * 1000.0));
     durations_[static_cast<std::size_t>(page)] = last_duration;
-    if (std::getline(input, effect, ':')) last_cube = effect == "c";
+    if (std::getline(input, effect, ':')) {
+      last_cube = effect == "c";
+      last_transition = last_cube ? Transition::cube_forward :
+          effect == "blinds" ? Transition::blinds : Transition::switch_page;
+    }
     cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
+    transitions_[(page + 1) % document_->page_count()] = last_transition;
     ++page;
   }
   for (; page < document_->page_count(); ++page) {
     durations_[static_cast<std::size_t>(page)] = last_duration;
     cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
+    transitions_[(page + 1) % document_->page_count()] = last_transition;
   }
 }
 
@@ -202,6 +215,10 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
     const int height = gtk_widget_get_height(GTK_WIDGET(area)) * scale;
     const FrameState state = self->frame_state();
     self->renderer_->render(width, height, state);
+    if (self->transition_preparing_) {
+      self->transition_started_ = g_get_monotonic_time();
+      self->transition_preparing_ = false;
+    }
     if (self->zoom_preparing_) {
       // Start the clock only after the full zoom-resolution texture is ready.
       self->zoom_started_ = g_get_monotonic_time();
@@ -222,8 +239,9 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
 double Application::animation_progress() const {
   if (transition_ == Transition::none) return 1.0;
   if (!options_.snapshot.empty()) return options_.snapshot_progress;
+  if (transition_preparing_) return 0.0;
   return std::clamp((g_get_monotonic_time() - transition_started_) /
-                        static_cast<double>(transition_duration_us),
+                        static_cast<double>(transition_length_us_),
                     0.0, 1.0);
 }
 
@@ -233,6 +251,9 @@ FrameState Application::frame_state() const {
   state.next_page = next_page_;
   state.transition = transition_;
   state.progress = animation_progress();
+  if (document_) state.vertical_blinds =
+      document_->page_info(next_page_).alignment == POPPLER_PAGE_TRANSITION_VERTICAL;
+  if (transition_ == Transition::blinds) return state;
   double progress = zoom_animating_ ? std::clamp(
       (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
       0.0, 1.0) : 1.0;
@@ -270,13 +291,23 @@ gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock*, gpointer 
   return G_SOURCE_CONTINUE;
 }
 
-void Application::start_page_change(int delta, bool cube) {
+void Application::start_page_change(int delta, bool cube, bool programmed) {
   if (!document_ || busy()) return;
   next_page_ = wrap_page(current_page_ + delta, document_->page_count());
   transition_ = cube ? (delta > 0 ? Transition::cube_forward : Transition::cube_backward)
                      : Transition::switch_page;
+  transition_length_us_ = transition_duration_us;
+  if (programmed) {
+    transition_ = transitions_[next_page_];
+    if (options_.program.empty()) {
+      transition_length_us_ = static_cast<gint64>(
+          document_->page_info(next_page_).transition_seconds * 1000000);
+      if (transition_length_us_ <= 0) transition_ = Transition::switch_page;
+    }
+  }
+  transition_preparing_ = transition_ == Transition::blinds;
   transition_started_ = g_get_monotonic_time();
-  if (!cube) {
+  if (transition_ == Transition::switch_page) {
     current_page_ = next_page_;
     transition_ = Transition::none;
     zoom_region_ = ZoomRegion::none;
@@ -370,7 +401,7 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
     case GDK_KEY_Page_Down: {
       const int destination = document_ ? wrap_page(current_page_ + 1, document_->page_count()) : 0;
       const bool cube = document_ && cube_transitions_[static_cast<std::size_t>(destination)];
-      start_page_change(1, cube);
+      start_page_change(1, cube, true);
       return true;
     }
     case GDK_KEY_g: reset_zoom(); return true;
@@ -412,7 +443,7 @@ gboolean Application::auto_advance_callback(gpointer data) {
   self->auto_advance_source_ = 0;
   if (!self->document_) return G_SOURCE_REMOVE;
   const int destination = wrap_page(self->current_page_ + 1, self->document_->page_count());
-  self->start_page_change(1, self->cube_transitions_[static_cast<std::size_t>(destination)]);
+  self->start_page_change(1, self->cube_transitions_[static_cast<std::size_t>(destination)], true);
   if (self->transition_ == Transition::none && self->options_.demo) {
     self->schedule_auto_advance();
   }

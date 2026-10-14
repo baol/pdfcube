@@ -10,7 +10,8 @@ int main(int argc, char** argv) {
   pdfcube::Document document(argv[1]);
 
   if (document.page_info(0).cube_transition || document.page_info(0).duration_ms != 0 ||
-      !document.page_info(1).cube_transition || document.page_info(1).duration_ms != 2000) {
+      !document.page_info(1).cube_transition || document.page_info(1).duration_ms != 0 ||
+      document.page_info(1).transition_seconds != 2.0) {
     std::cerr << "PDF transition metadata was not preserved\n";
     return EXIT_FAILURE;
   }

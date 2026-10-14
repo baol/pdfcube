@@ -1,5 +1,9 @@
 # PDFCube
 
+The [transition roadmap and review gallery](docs/transitions/README.md) describes
+new effects, their validation gates, and how to generate videos and contact sheets.
+Ready-to-open [example PDFs](examples/transitions/README.md) are included.
+
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 
 PDFCube is a focused PDF presentation viewer with animated 3D cube

@@ -21,6 +21,7 @@ struct Options {
   std::string input_file;
   std::string snapshot;
   double snapshot_progress{0.0};
+  bool snapshot_transition{false};
 };
 
 struct ParseResult {
