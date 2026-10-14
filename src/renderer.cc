@@ -5,6 +5,7 @@
 #include "split.hpp"
 #include "page_flip.hpp"
 #include "fly.hpp"
+#include "push.hpp"
 
 #include <algorithm>
 #include <array>
@@ -474,6 +475,33 @@ void Renderer::render(int width, int height, const FrameState& frame) {
     if (frame.progress <= 0 || frame.progress >= 1) {
       draw_page(landed ? frame.next_page : frame.current_page,
                 texture_size, Matrix::identity().value.data());
+      return;
+    }
+    if (frame.transition == Transition::push) {
+      const PushPose pose = push_pose(frame.progress, frame.direction_degrees);
+      const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
+                          translate(0, 0, -flip_camera);
+      const auto draw_fitted = [&](int index, const Matrix& model, float shade) {
+        constexpr float depth = .10F;
+        const auto& info = document_.page_info(index);
+        const auto fit = content_viewport(width, height, info.width / info.height);
+        glViewport(fit.x, fit.y, fit.width, fit.height);
+        glUniform1f(shade_uniform_, shade * .78F);
+        for (const Matrix& side : {
+                 translate(-1, 0, 0) * rotate_y(-pi / 2) * scale(depth / 2, 1, 1),
+                 translate(1, 0, 0) * rotate_y(pi / 2) * scale(depth / 2, 1, 1),
+                 translate(0, 1, 0) * rotate_x(-pi / 2) * scale(1, depth / 2, 1),
+                 translate(0, -1, 0) * rotate_x(pi / 2) * scale(1, depth / 2, 1),
+                 translate(0, 0, -depth / 2) * rotate_y(pi),
+             }) {
+          draw_color(top_, (view * model * side).value.data());
+        }
+        glUniform1f(shade_uniform_, shade);
+        draw_page(index, page_size(index),
+                  (view * model * translate(0, 0, depth / 2)).value.data());
+      };
+      draw_fitted(frame.current_page, pose.outgoing, .88F + pose.compression);
+      draw_fitted(frame.next_page, pose.incoming, .92F + pose.compression);
       return;
     }
     if (frame.transition != Transition::blinds) {

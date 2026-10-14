@@ -14,12 +14,14 @@
 
 namespace pdfcube {
 
-enum class Transition { none, cube_forward, cube_backward, switch_page, blinds, split, cover, uncover, fly };
+enum class Transition {
+  none, cube_forward, cube_backward, switch_page, blinds, split, cover, uncover, fly, push
+};
 
 inline bool page_effect(Transition transition) {
   return transition == Transition::blinds || transition == Transition::split ||
          transition == Transition::cover || transition == Transition::uncover ||
-         transition == Transition::fly;
+         transition == Transition::fly || transition == Transition::push;
 }
 
 struct FrameState {

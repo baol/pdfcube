@@ -14,6 +14,9 @@ EXAMPLES = [(f"blinds-{name}", "Blinds", axis, "I", None)
         ((0, "right"), (45, "up-right"), (90, "up"), (135, "up-left"),
          (180, "left"), (225, "down-left"), (270, "down"), (315, "down-right")),
         ("I", "O", "I", "O", "I", "O", "I", "O"))]
+EXAMPLES += [(f"push-{name}", "Push", "H", "I", angle)
+             for angle, name in ((0, "right"), (90, "up"),
+                                 (180, "left"), (270, "down"))]
 
 
 def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),

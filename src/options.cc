@@ -60,11 +60,11 @@ ParseResult parse_options(int argc, char** argv) {
       ("bgcolor,b", po::value<std::string>(),
        "Background color as r:g:b, with values between 0.0 and 1.0.")
       ("top-color,t", po::value<std::string>(),
-       "Cube top color as r:g:b, with values between 0.0 and 1.0.")
+       "Cube cap and Push side color as r:g:b, with values between 0.0 and 1.0.")
       ("demo", po::value<bool>()->implicit_value(true),
        "Auto-advance using PDF or programmed durations.")
       ("program", po::value<std::string>(),
-       "Transition program duration:type pairs (c, p, blinds, split, cover, uncover, fly), for example 5:c:3:p.")
+       "Transition program duration:type pairs (c, p, blinds, split, cover, uncover, fly, push), for example 5:c:3:p.")
       ("performance-log", po::value<std::string>(),
        "Write buffered animation frame timings to a CSV file on exit.")
       ("no-fullscreen,n", po::value<bool>()->implicit_value(true),

@@ -20,6 +20,8 @@ Ready-to-open diagnostic slides:
 - Fly outward: [upper right](fly-out-up-right.pdf),
   [upper left](fly-out-up-left.pdf), [lower left](fly-out-down-left.pdf),
   [lower right](fly-out-down-right.pdf)
+- Push: [right](push-right.pdf), [up](push-up.pdf),
+  [left](push-left.pdf), [down](push-down.pdf)
 
 From the repository root:
 
@@ -40,6 +42,8 @@ Both use a single curved sheet. Names describe the PDF travel direction, not
 the hinge location; see the roadmap for the exact mapping.
 Fly drifts the page like a leaf along a shallow 3D arc, with a restrained bank
 and flutter that settle completely at the endpoint.
+Push treats the pages as shallow padded blocks: the incoming block contacts and
+briefly compresses against the outgoing block while transferring its momentum.
 
 Regenerate all PDFs deterministically with Python's standard library:
 
