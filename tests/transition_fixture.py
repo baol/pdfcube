@@ -18,6 +18,8 @@ EXAMPLES += [(f"push-{name}", "Push", "H", "I", angle)
              for angle, name in ((0, "right"), (90, "up"),
                                  (180, "left"), (270, "down"))]
 EXAMPLES += [("dissolve", "Dissolve", "H", "I", None)]
+EXAMPLES += [(f"glitter-{name}", "Glitter", "H", "I", angle)
+             for angle, name in ((0, "right"), (270, "down"), (315, "down-right"))]
 
 
 def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),

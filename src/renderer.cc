@@ -7,6 +7,7 @@
 #include "fly.hpp"
 #include "push.hpp"
 #include "dissolve.hpp"
+#include "glitter.hpp"
 
 #include <algorithm>
 #include <array>
@@ -581,6 +582,35 @@ void Renderer::render(int width, int height, const FrameState& frame) {
                   1 - .12F * std::pow(std::sin(pi * static_cast<float>(frame.progress)), 2));
       draw_fitted(frame.next_page, pose.incoming,
                   1 - .08F * std::pow(std::sin(pi * static_cast<float>(frame.progress)), 2));
+      return;
+    }
+    if (frame.transition == Transition::glitter) {
+      const auto& incoming = document_.page_info(frame.next_page);
+      const auto fit = content_viewport(width, height, incoming.width / incoming.height);
+      glViewport(fit.x, fit.y, fit.width, fit.height);
+      draw_page(frame.next_page, page_size(frame.next_page), Matrix::identity().value.data());
+      glViewport(viewport.x, viewport.y, viewport.width, viewport.height);
+      glDisable(GL_DEPTH_TEST);
+      glDisable(GL_CULL_FACE);
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      for (const auto& piece : glitter_pieces(frame.progress, frame.direction_degrees)) {
+        glUniform4f(uv_rect_uniform_, piece.u, piece.v, piece.width, piece.height);
+        glBlendColor(0, 0, 0, piece.opacity);
+        glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+        draw_page(frame.current_page, page_size(frame.current_page), piece.transform.value.data());
+        // Small warm sparks use ordinary alpha blending to bound brightness.
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        const Matrix spark = piece.transform * scale(.16F, .16F, 1);
+        const float spark_alpha = piece.opacity < 1 || piece.glow > 0 ?
+            (.25F + .4F * piece.glow) * piece.opacity : 0;
+        draw_color(Color{1, .72F, .28F, spark_alpha},
+                   spark.value.data());
+      }
+      glDisable(GL_BLEND);
+      glEnable(GL_CULL_FACE);
+      glEnable(GL_DEPTH_TEST);
+      glUniform4f(uv_rect_uniform_, 0, 0, 1, 1);
       return;
     }
     if (frame.transition == Transition::dissolve) {

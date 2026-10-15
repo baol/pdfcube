@@ -19,6 +19,23 @@ Future effects must preserve document ratio, prepare full-resolution source
 images before motion, and finish on the exact static destination image.
 Geometry is a function of progress, never an uncontrolled physics simulation.
 
+## Glitter: experimental, awaiting visual approval
+
+A directional front releases small textured pieces of the outgoing slide,
+revealing the destination beneath. Pieces rotate, drift and fade, with small
+warm sparks highlighting release and fading during flight. Alpha blending
+bounds brightness; the effect uses at most 336 pieces. Motion is deterministic.
+The first and last frames use the exact static page rendering path.
+
+PDF `/Di` values 0, 270 and 315 select right, down and diagonal down-right.
+Missing or invalid directions use right. `--program 4:glitter` selects the same
+effect. Try the [right](../../examples/transitions/glitter-right.pdf),
+[down](../../examples/transitions/glitter-down.pdf) and
+[diagonal](../../examples/transitions/glitter-down-right.pdf) examples.
+Rendering tests cover all directions and page ratios, including exact endpoint
+images. No rendered gallery or visual approval is claimed until those checks
+can run on a machine with GTK and OpenGL.
+
 ## Blinds: experimental, awaiting visual approval
 
 Try the committed [horizontal](../../examples/transitions/blinds-horizontal.pdf)

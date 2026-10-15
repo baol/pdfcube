@@ -56,3 +56,7 @@ python3 tests/transition_fixture.py examples/transitions
 
 The generator is the source of truth; do not edit the PDFs by hand.
 See the [review roadmap](../../docs/transitions/README.md) for videos and tests.
+## Glitter
+
+`glitter-right.pdf`, `glitter-down.pdf` and `glitter-down-right.pdf` demonstrate
+the experimental directional flare and sparks transition. Press Space to advance.
