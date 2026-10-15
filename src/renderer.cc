@@ -535,16 +535,16 @@ void Renderer::render(int width, int height, const FrameState& frame) {
                  translate(0, -1, 0) * rotate_x(pi / 2) * scale(1, depth / 2, 1),
                  translate(0, 0, -depth / 2) * rotate_y(pi),
              }) {
-          draw_color(top_, (view * model * side).value.data());
+          draw_color(top_, (view * model * translate(0, 0, -depth / 2) * side).value.data());
         }
         glUniform1f(shade_uniform_, shade);
         draw_page(index, page_size(index),
-                  (view * model * translate(0, 0, depth / 2)).value.data());
+                  (view * model).value.data());
       };
       draw_fitted(frame.current_page, pose.outgoing,
-                  .88F + pose.outgoing_compression);
+                  1 - .12F * std::pow(std::sin(pi * static_cast<float>(frame.progress)), 2));
       draw_fitted(frame.next_page, pose.incoming,
-                  .92F + pose.incoming_compression);
+                  1 - .08F * std::pow(std::sin(pi * static_cast<float>(frame.progress)), 2));
       return;
     }
     if (frame.transition == Transition::dissolve) {

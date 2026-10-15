@@ -79,11 +79,9 @@ inline const std::vector<GlassShard>& glass_shards() {
               (ring[triangle][0] + ring[triangle + 1][0] + center[0]) / 3;
           const float centroid_y =
               (ring[triangle][1] + ring[triangle + 1][1] + center[1]) / 3;
-          // Two off-centre impacts make the fracture travel in overlapping waves.
-          const float impact_x = shard_hash(id + 101U) < .55F ? -.32F : .38F;
-          const float impact_y = impact_x < 0 ? .24F : -.18F;
-          float direction_x = centroid_x - impact_x;
-          float direction_y = centroid_y - impact_y;
+          // A single central impact sends a fast fracture wave outwards.
+          float direction_x = centroid_x;
+          float direction_y = centroid_y;
           const float length = std::hypot(direction_x, direction_y);
           if (length > .001F) {
             direction_x /= length;
@@ -91,7 +89,7 @@ inline const std::vector<GlassShard>& glass_shards() {
           }
           result.push_back({
               {vertex(ring[triangle]), vertex(ring[triangle + 1]), vertex(center)},
-              .30F * shard_hash(id * 29U + 7U), direction_x, direction_y,
+              .025F * length, direction_x, direction_y,
               (shard_hash(id * 43U + 13U) - .5F) * 2.2F,
               (shard_hash(id * 47U + 17U) - .5F) * 1.6F,
               (shard_hash(id * 59U + 23U) - .5F) * 1.6F});
@@ -116,10 +114,11 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
       center_x += vertex.x / 3;
       center_y += vertex.y / 3;
     }
-    const float raw = std::clamp((position - .08F - shard.delay) /
-                                     std::max(.01F, .88F - shard.delay),
+    const float raw = std::clamp((position - shard.delay) /
+                                     std::max(.01F, 1 - shard.delay),
                                  0.0F, 1.0F);
-    const float motion = raw * raw * (3 - 2 * raw);
+    // Immediate impulse followed by drag; gravity acts after the impact.
+    const float motion = (1 - std::exp(-3 * raw)) / (1 - std::exp(-3.0F));
     const float angle = shard.spin * motion;
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
@@ -130,8 +129,8 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float cosine_y = std::cos(tilt_y);
     const float sine_y = std::sin(tilt_y);
     const float separation = .0045F * crack + .018F * motion;
-    const float travel = 2.3F * motion * motion * motion;
-    const float fall = 1.15F * motion * motion;
+    const float travel = 3.2F * motion;
+    const float fall = .65F * raw * raw;
     const float shrink = 1 - .14F * motion;
     for (const ShardVertex& source : shard.vertices) {
       const float local_x = (source.x - center_x) * shrink;
@@ -145,7 +144,7 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
       result.push_back({
           center_x + turned_x + shard.direction_x * (separation + travel),
           center_y + pitched_y + shard.direction_y * (separation + travel) - fall,
-          .72F * motion * motion + turned_z, source.u, source.v});
+          .72F * motion + turned_z, source.u, source.v});
     }
   }
 }

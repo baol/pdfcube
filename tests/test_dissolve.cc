@@ -46,4 +46,27 @@ int main() {
   assert(cracked_distance > intact_distance);
   assert(departed_distance > cracked_distance * 1.5);
   assert(maximum_depth > .5F);
+
+  // A central impact must launch every shard outward promptly, with a
+  // stronger initial impulse than its later drift.
+  std::vector<pdfcube::ShardVertex> early, later, drift;
+  pdfcube::update_glass_shard_vertices(.10, early);
+  pdfcube::update_glass_shard_vertices(.20, later);
+  pdfcube::update_glass_shard_vertices(.30, drift);
+  for (std::size_t i = 0; i < shards.size(); ++i) {
+    float x = 0, y = 0, ex = 0, ey = 0, lx = 0, ly = 0, dx = 0, dy = 0;
+    for (std::size_t j = 0; j < 3; ++j) {
+      x += intact[3 * i + j].x / 3;
+      y += intact[3 * i + j].y / 3;
+      ex += early[3 * i + j].x / 3;
+      ey += early[3 * i + j].y / 3;
+      lx += later[3 * i + j].x / 3;
+      ly += later[3 * i + j].y / 3;
+      dx += drift[3 * i + j].x / 3;
+      dy += drift[3 * i + j].y / 3;
+    }
+    assert(x * shards[i].direction_x + y * shards[i].direction_y > 0);
+    assert(std::hypot(ex - x, ey - y) > .5F);
+    assert(std::hypot(lx - ex, ly - ey) > std::hypot(dx - lx, dy - ly));
+  }
 }
