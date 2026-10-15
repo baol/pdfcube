@@ -38,17 +38,7 @@ configured_manpage = configure_file(
 subdir('src')
 subdir('tests')
 
-# Explicit documentation build: always available, never part of the default
-# build. TeX dependencies are required when this target is invoked.
-run_target(
-  'doc',
-  command: [
-    find_program('python3'),
-    files('tools/build_showcase.py'),
-    meson.project_source_root() / 'examples/showcase/showcase.tex',
-    meson.project_build_root() / 'showcase',
-  ],
-)
+subdir('examples/showcase')
 
 if host_machine.system() != 'windows' and host_machine.system() != 'darwin'
   install_data(

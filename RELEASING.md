@@ -14,6 +14,7 @@ highest stable tag's patch component; raise the major or minor component in
    ```sh
    meson setup build --buildtype=release -Dwerror=true
    meson compile -C build
+   meson compile -C build doc
    meson test -C build --print-errorlogs
    desktop-file-validate org.pdfcube.pdfcube.desktop
    appstreamcli validate --pedantic --no-net build/org.pdfcube.pdfcube.metainfo.xml
@@ -22,7 +23,10 @@ highest stable tag's patch component; raise the major or minor component in
    lintian --profile ubuntu ../pdfcube_*.changes
    ```
 
-3. Inspect the source archive and Debian package contents. Complete every
+3. Inspect the source archive and Debian package contents. The Debian package
+   and AppImage must include `showcase.pdf`, `showcase.tex` and `README.md` under
+   `usr/share/doc/pdfcube/examples/`. Packaging requires TeX Live with Beamer
+   and PGF/TikZ (`texlive-latex-recommended` and `texlive-pictures`). Complete every
    manual rendering smoke test marked as a release requirement in
    `COMPATIBILITY.md`, including Wayland/NVIDIA, X11, Windows, and macOS.
 4. Commit and merge the release preparation to `master`. Do not create the tag
@@ -37,5 +41,12 @@ The `master` push starts `.github/workflows/release.yml`. It calculates the
 version, builds and tests on the latest Ubuntu LTS runner, and creates the
 annotated tag only after every artifact succeeds. It then publishes a GitHub
 Release with a `.tar.gz` source archive, an amd64 `.deb`, an x86-64 AppImage,
-and `SHA256SUMS`. GitHub Actions also retains the same files as a workflow
+`pdfcube-VERSION-showcase.pdf`, and `SHA256SUMS`. GitHub Actions also retains the same files as a workflow
 artifact.
+
+The release build explicitly enables `-Dinstall_docs=true` and invokes the
+Meson `doc` target before staging the AppImage. Debian's build rules enable
+that option and invoke `doc` independently, so packages do not depend on a PDF
+left over from another build. The standalone PDF is copied into `release-assets`
+before checksums are generated. Missing documentation fails the package or
+release checks.

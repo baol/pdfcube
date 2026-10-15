@@ -34,7 +34,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: beamer-showcase
-          path: build/showcase/showcase.pdf
+          path: build/examples/showcase/showcase.pdf
           if-no-files-found: error
       - name: Capture transition review gallery
         env:
@@ -55,6 +55,10 @@ jobs:
         run: |
           sed -i '1s/ unstable;/ noble;/' debian/changelog
           dpkg-buildpackage -us -uc -b
+          dpkg-deb --extract ../pdfcube_*_amd64.deb build/deb-doc-check
+          for name in showcase.pdf showcase.tex README.md; do
+            test -s "build/deb-doc-check/usr/share/doc/pdfcube/examples/${name}"
+          done
       - name: Lint Debian package
         run: lintian --profile ubuntu ../pdfcube_*.changes
 
