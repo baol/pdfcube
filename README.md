@@ -9,7 +9,8 @@ Blinds uses cascading slats; Split uses opening/closing 3D doors;
 Cover/Uncover use curved page flips in all four directions. These have
 reproducible screenshots and review videos linked from the roadmap.
 Fly adds a controlled leaf-like drift in arbitrary PDF directions, with the
-same reproducible review assets.
+same reproducible review assets. Push transfers momentum between two softly
+compressing slide blocks in all four PDF directions.
 
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 
@@ -88,10 +89,10 @@ Run `pdfcube --help` for the complete command-line interface. The established
 options remain available:
 
 - `--bgcolor r:g:b` sets the background color.
-- `--top-color r:g:b` sets the cube cap color.
+- `--top-color r:g:b` sets the cube cap and Push side color.
 - `--demo` enables automatic slide advancement.
-- `--program n:x:...` programs durations and cube (`c`) or plain (`p`)
-  transitions.
+- `--program n:x:...` programs durations and transition types, including cube
+  (`c`), plain (`p`), and the documented PDF effects.
 - `--performance-log timings.csv` buffers animation frame timings and writes
   them on exit, without file I/O during motion.
 - `--no-fullscreen` starts in a window.

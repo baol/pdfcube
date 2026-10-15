@@ -8,6 +8,10 @@ flip_test = executable('page-flip-test', files('test_page_flip.cc'),
                        include_directories: include_directories('../src'))
 test('page flip connected geometry', flip_test)
 
+push_test = executable('push-test', files('test_push.cc'),
+                       include_directories: include_directories('../src'))
+test('push contact geometry', push_test)
+
 split_test = executable('split-test', files('test_split.cc'),
                         include_directories: include_directories('../src'))
 test('split hinged geometry', split_test)
@@ -76,6 +80,14 @@ if xvfb_run.found()
       env: render_test_environment,
     )
   endforeach
+  test(
+    'Push rendering and PDF metadata',
+    python,
+    args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe,
+           transition_metadata_test, 'Push'],
+    timeout: 240,
+    env: render_test_environment,
+  )
   foreach motion : ['I', 'O']
     test(
       'Fly rendering and PDF metadata ' + motion,

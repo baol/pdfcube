@@ -12,6 +12,7 @@ effect = sys.argv[4] if len(sys.argv) > 4 else "Blinds"
 motion = sys.argv[5] if len(sys.argv) > 5 else "I"
 flip = effect in ("Cover", "Uncover")
 fly = effect == "Fly"
+push = effect == "Push"
 environment = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1")
 
 with tempfile.TemporaryDirectory() as directory:
@@ -47,6 +48,8 @@ with tempfile.TemporaryDirectory() as directory:
     middles = []
     cases = [("H", angle) for angle in (0, 90, 180, 270)] if flip else \
             [("H", angle) for angle in range(0, 360, 45)] if fly else [("H", None), ("V", None)]
+    if push:
+        cases = [("H", angle) for angle in (0, 90, 180, 270)]
     for orientation, angle in cases:
         dimensions = (((640, 360), (640, 360)),) if fly and angle not in (0, 90) else \
                      (((640, 360), (640, 360)), ((360, 640), (360, 640)),
@@ -55,7 +58,7 @@ with tempfile.TemporaryDirectory() as directory:
             deck, first, last = (root / name for name in ("deck.pdf", "first.pdf", "last.pdf"))
             make_pdf(deck, orientation, sizes, effect=effect, motion=motion, angle=angle)
             metadata = [metadata_test, str(deck), orientation, effect, motion]
-            extra_metadata = [str(angle)] if flip else \
+            extra_metadata = [str(angle)] if flip or push else \
                              [str(angle), ".35", "1"] if fly else []
             subprocess.run(metadata + extra_metadata, check=True)
             make_pdf(first, orientation, sizes, (0,))
@@ -65,6 +68,11 @@ with tempfile.TemporaryDirectory() as directory:
             assert capture(deck, 1) == end, "last frame has seams, distortion or wrong page"
             middle = capture(deck, .5)
             if flip and angle == 0:
+                for value in (None, 45, -90):
+                    fallback = root / "fallback.pdf"
+                    make_pdf(fallback, orientation, sizes, effect=effect, angle=value)
+                    assert capture(fallback, .5) == middle, "default/invalid direction differs"
+            if push and angle == 0:
                 for value in (None, 45, -90):
                     fallback = root / "fallback.pdf"
                     make_pdf(fallback, orientation, sizes, effect=effect, angle=value)
@@ -95,7 +103,7 @@ with tempfile.TemporaryDirectory() as directory:
             quarter, three_quarters = capture(deck, .25), capture(deck, .75)
             assert len({start, quarter, middle, three_quarters, end}) == 5, "cascade stalled"
             middles.append(middle)
-    if fly:
-        assert len(set(middles)) == len(middles), "Fly direction or page ratio ignored"
+    if fly or push:
+        assert len(set(middles)) == len(middles), f"{effect} direction or page ratio ignored"
     else:
         assert len(set(middles[::3])) == len(cases), "orientation/direction ignored"

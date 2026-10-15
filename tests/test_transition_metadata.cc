@@ -10,10 +10,12 @@ int main(int argc, char** argv) {
   const bool cover = argc >= 5 && argv[3][0] == 'C';
   const bool uncover = argc >= 5 && argv[3][0] == 'U';
   const bool fly = argc >= 5 && argv[3][0] == 'F';
+  const bool push = argc >= 5 && argv[3][0] == 'P';
   const auto type = split ? POPPLER_PAGE_TRANSITION_SPLIT :
                     cover ? POPPLER_PAGE_TRANSITION_COVER :
                     uncover ? POPPLER_PAGE_TRANSITION_UNCOVER :
-                    fly ? POPPLER_PAGE_TRANSITION_FLY : POPPLER_PAGE_TRANSITION_BLINDS;
+                    fly ? POPPLER_PAGE_TRANSITION_FLY :
+                    push ? POPPLER_PAGE_TRANSITION_PUSH : POPPLER_PAGE_TRANSITION_BLINDS;
   const bool success = page.transition_type == type &&
          (argc < 6 || page.angle == std::atoi(argv[5])) &&
          (!(split || fly) || page.direction == (argv[4][0] == 'O' ? POPPLER_PAGE_TRANSITION_OUTWARD :

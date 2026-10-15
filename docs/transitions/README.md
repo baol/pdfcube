@@ -139,6 +139,34 @@ The other six direction captures and all eight videos are in the same gallery.
 with the normal 750 ms programmed duration. Explicit cube and instant keys are
 unchanged.
 
+## Push: experimental, awaiting visual approval
+
+Push treats the outgoing and incoming pages as two shallow padded blocks. Their
+shared contact plane travels in the PDF `/Di` direction. At impact the softer
+outgoing block squashes by about ten percent along the travel axis, bulges by up
+to 3.5 percent across it, and makes one small damped wobble. The firmer incoming
+block yields by at most 2.5 percent. Both lift slightly toward the viewer and
+recover completely before the final frame. These are closed-form easing curves,
+not a free-running simulation, so replay, reverse navigation and review captures
+remain deterministic.
+
+PDF directions 0, 90, 180 and 270 select right, up, left and down. Missing or
+unsupported angles use the PDF default of right. Both pages are rendered at
+full output resolution before motion and retain their own fitted aspect ratios.
+The 0% and 100% paths draw the exact static source and destination pages.
+`--program duration:push` selects the effect with the destination PDF's
+direction and the normal 750 ms programmed duration.
+
+The four committed examples use the same generator as the tests and gallery:
+
+![Push right](push-right.png)
+
+![Push up](push-up.png)
+
+Other directions: [left](push-left.png) and [down](push-down.png). All four
+videos are included in the generated review bundle. `--top-color` controls the
+shallow side faces as well as the classic cube caps.
+
 ## Reproduce the review bundle
 
 Install Pillow and ffmpeg in addition to the normal build/test dependencies:
@@ -170,8 +198,8 @@ same process and add their own fixtures and gallery entry.
 
 ## Validation record
 
-Blinds, Split, Cover/Uncover and Fly: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
-Xvfb/software OpenGL. All sixteen tests passed with warnings treated as errors,
+Blinds, Split, Cover/Uncover, Fly and Push: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
+Xvfb/software OpenGL. All nineteen tests passed with warnings treated as errors,
 both normally and with address/undefined-behavior sanitizers.
 The horizontal and vertical contact sheets were inspected for direction and
 readable reverse faces. Page-flip captures were inspected for curvature,
@@ -179,6 +207,9 @@ direction and readable text; a Split midpoint still matched the previous
 capture byte-for-byte. Fly contact sheets were inspected for direction,
 readable text, restrained
 flutter and a flat landing. This is not yet native-platform or motion approval.
+Push captures were inspected for continuous contact, asymmetric squash, a
+restrained settling wobble, direction and complete recovery. This is not yet
+native-platform or motion approval.
 
 - Automated: PDF metadata (fractional animation duration distinct from dwell),
   both axes, portrait/landscape/mixed dimensions, deterministic midpoint,
@@ -192,6 +223,9 @@ flutter and a flat landing. This is not yet native-platform or motion approval.
   omitted/invalid angle fallback, program selection and reproducible example PDFs.
 - Fly checks cover all eight compass directions, inward/outward reversibility,
   bounded height and monotonic landing, `/SS` validation, PDF metadata, program
+  selection, deterministic rendering, exact endpoints and reproducible examples.
+- Push checks cover all four PDF directions, default/invalid direction fallback,
+  monotonic contact, bounded squash/stretch/wobble, PDF metadata, program
   selection, deterministic rendering, exact endpoints and reproducible examples.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
   native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback

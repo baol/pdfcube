@@ -25,6 +25,10 @@ page away. These use one curved sheet, with PDF direction 0 (right), 90 (up),
 PDF Fly moves a page like a leaf on a shallow 3D arc. Direction, inward/outward
 motion and starting scale come from the document; arbitrary direction angles
 are supported. Invalid starting scales default to full size.
+PDF Push treats both pages as shallow padded blocks. The incoming page transfers
+momentum to the outgoing page; both compress briefly at their shared contact
+edge and recover fully. PDF direction selects right, up, left, or down; missing
+or unsupported angles default to right.
 Other unsupported PDF transitions currently change pages instantly.
 PDF transition duration controls the animation; page duration controls how
 long automatic playback displays a slide. These are separate values.
@@ -40,6 +44,7 @@ Set the background color. Each component is a number from 0.0 to 1.0.
 .TP
 .BR \-t ", " \-\-top-color " " r:g:b"
 Set the cube cap color. Each component is a number from 0.0 to 1.0.
+The Push effect uses the same color for its shallow side faces.
 .TP
 .BR \-n ", " \-\-no-fullscreen
 Start in a window instead of fullscreen mode.
@@ -67,6 +72,9 @@ select curved page flips with a 750 ms animation and the document's direction.
 .B fly
 selects the leaf-like Fly effect with a 750 ms animation and the document's
 direction, motion and starting scale.
+.B push
+selects the soft-block Push effect with a 750 ms animation and the document's
+direction.
 The last pair is repeated for remaining slides.
 For example,
 .B \-\-program 5:c:3:p
