@@ -500,8 +500,10 @@ void Renderer::render(int width, int height, const FrameState& frame) {
         draw_page(index, page_size(index),
                   (view * model * translate(0, 0, depth / 2)).value.data());
       };
-      draw_fitted(frame.current_page, pose.outgoing, .88F + pose.compression);
-      draw_fitted(frame.next_page, pose.incoming, .92F + pose.compression);
+      draw_fitted(frame.current_page, pose.outgoing,
+                  .88F + pose.outgoing_compression);
+      draw_fitted(frame.next_page, pose.incoming,
+                  .92F + pose.incoming_compression);
       return;
     }
     if (frame.transition != Transition::blinds) {

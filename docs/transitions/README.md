@@ -142,11 +142,13 @@ unchanged.
 ## Push: experimental, awaiting visual approval
 
 Push treats the outgoing and incoming pages as two shallow padded blocks. Their
-shared contact plane travels in the PDF `/Di` direction. At impact both blocks
-compress by at most 7.5 percent along the travel axis, lift slightly toward the
-viewer, and lean toward one another; they recover completely before the final
-frame. The motion is a closed-form easing curve rather than a simulated spring,
-so replay, reverse navigation and review captures remain deterministic.
+shared contact plane travels in the PDF `/Di` direction. At impact the softer
+outgoing block squashes by about ten percent along the travel axis, bulges by up
+to 3.5 percent across it, and makes one small damped wobble. The firmer incoming
+block yields by at most 2.5 percent. Both lift slightly toward the viewer and
+recover completely before the final frame. These are closed-form easing curves,
+not a free-running simulation, so replay, reverse navigation and review captures
+remain deterministic.
 
 PDF directions 0, 90, 180 and 270 select right, up, left and down. Missing or
 unsupported angles use the PDF default of right. Both pages are rendered at
@@ -205,9 +207,9 @@ direction and readable text; a Split midpoint still matched the previous
 capture byte-for-byte. Fly contact sheets were inspected for direction,
 readable text, restrained
 flutter and a flat landing. This is not yet native-platform or motion approval.
-Push captures were inspected for continuous contact, restrained compression,
-direction and complete recovery. This is not yet native-platform or motion
-approval.
+Push captures were inspected for continuous contact, asymmetric squash, a
+restrained settling wobble, direction and complete recovery. This is not yet
+native-platform or motion approval.
 
 - Automated: PDF metadata (fractional animation duration distinct from dwell),
   both axes, portrait/landscape/mixed dimensions, deterministic midpoint,
@@ -223,8 +225,8 @@ approval.
   bounded height and monotonic landing, `/SS` validation, PDF metadata, program
   selection, deterministic rendering, exact endpoints and reproducible examples.
 - Push checks cover all four PDF directions, default/invalid direction fallback,
-  monotonic contact, bounded compression, PDF metadata, program selection,
-  deterministic rendering, exact endpoints and reproducible examples.
+  monotonic contact, bounded squash/stretch/wobble, PDF metadata, program
+  selection, deterministic rendering, exact endpoints and reproducible examples.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
   native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback
   memory checks. Still-frame and geometry checks are not substitutes for these.
