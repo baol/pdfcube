@@ -16,6 +16,7 @@ flip = effect in ("Cover", "Uncover")
 fly = effect == "Fly"
 push = effect == "Push"
 dissolve = effect == "Dissolve"
+glitter = effect == "Glitter"
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
@@ -56,7 +57,7 @@ with tempfile.TemporaryDirectory() as directory:
                 sys.exit(0)
             assert mode == "checkpoints", "unknown rendering test mode"
             metadata = [metadata_test, str(deck), orientation, effect, motion]
-            extra_metadata = [str(angle)] if flip or push else \
+            extra_metadata = [str(angle)] if flip or push or glitter else \
                              [str(angle), ".35", "1"] if fly else []
             subprocess.run(metadata + extra_metadata, check=True)
             make_pdf(first, orientation, sizes, (0,))
@@ -78,7 +79,7 @@ with tempfile.TemporaryDirectory() as directory:
                     fallback = root / "fallback.pdf"
                     make_pdf(fallback, orientation, sizes, effect=effect, angle=value)
                     assert capture(fallback, .5) == middle, "default/invalid direction differs"
-            if push and angle == 0:
+            if (push or glitter) and angle == 0:
                 for value in (None, 45, -90):
                     fallback = root / "fallback.pdf"
                     make_pdf(fallback, orientation, sizes, effect=effect, angle=value)
@@ -110,7 +111,10 @@ with tempfile.TemporaryDirectory() as directory:
             assert len({start, quarter, middle, three_quarters, end}) == 5, "cascade stalled"
             if not dissolve:
                 changed = root / "changed-direction.pdf"
-                if flip or fly or push:
+                if glitter:
+                    make_pdf(changed, orientation, sizes, effect=effect,
+                             angle={0: 270, 270: 315, 315: 0}[angle])
+                elif flip or fly or push:
                     make_pdf(changed, orientation, sizes, effect=effect, motion=motion,
                              angle=(angle+180)%360)
                 else:

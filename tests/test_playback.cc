@@ -9,7 +9,8 @@ int main() {
       {POPPLER_PAGE_TRANSITION_BLINDS,"blinds"}, {POPPLER_PAGE_TRANSITION_SPLIT,"split"},
       {POPPLER_PAGE_TRANSITION_COVER,"cover"}, {POPPLER_PAGE_TRANSITION_UNCOVER,"uncover"},
       {POPPLER_PAGE_TRANSITION_FLY,"fly"}, {POPPLER_PAGE_TRANSITION_PUSH,"push"},
-      {POPPLER_PAGE_TRANSITION_DISSOLVE,"dissolve"}};
+      {POPPLER_PAGE_TRANSITION_DISSOLVE,"dissolve"},
+      {POPPLER_PAGE_TRANSITION_GLITTER,"glitter"}};
   for (const auto& [kind,name] : kinds) {
     pdfcube::PageInfo page;
     page.transition_type=kind;

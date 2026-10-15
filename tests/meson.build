@@ -3,6 +3,7 @@ python = import('python').find_installation('python3')
 test_watchdog = 10
 
 foreach item : [
+  ['directional glitter geometry', 'test_glitter.cc'],
   ['deterministic glass fracture', 'test_dissolve.cc'],
   ['Fly leaf trajectory', 'test_fly.cc'],
   ['page flip connected geometry', 'test_page_flip.cc'],
@@ -73,7 +74,7 @@ if host_machine.system() == 'linux'
   render_environment.set('FONTCONFIG_FILE', meson.current_source_dir() / 'fonts.conf')
   render_environment.set('XDG_CACHE_HOME', meson.current_build_dir() / 'native-test-cache')
   # Every case targets 500 ms, including cold setup. Serialize to avoid GPU contention.
-  foreach effect : ['Blinds', 'Split', 'Cover', 'Uncover', 'Fly', 'Push', 'Dissolve']
+  foreach effect : ['Blinds', 'Split', 'Cover', 'Uncover', 'Fly', 'Push', 'Dissolve', 'Glitter']
     axes = ['H']
     angles = ['none']
     motions = ['I']
@@ -87,6 +88,8 @@ if host_machine.system() == 'linux'
       angles = ['0', '90', '180', '270']
     elif effect == 'Fly'
       angles = ['0', '45', '90', '135', '180', '225', '270', '315']
+    elif effect == 'Glitter'
+      angles = ['0', '270', '315']
     endif
     foreach axis : axes
       foreach motion : motions

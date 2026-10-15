@@ -18,6 +18,7 @@ inline Transition transition_from_name(const std::string& effect) {
   if (effect == "fly") return Transition::fly;
   if (effect == "push") return Transition::push;
   if (effect == "dissolve") return Transition::dissolve;
+  if (effect == "glitter") return Transition::glitter;
   return Transition::switch_page;
 }
 
@@ -31,6 +32,7 @@ inline Transition transition_from_page(const PageInfo& page) {
     case POPPLER_PAGE_TRANSITION_FLY: return Transition::fly;
     case POPPLER_PAGE_TRANSITION_PUSH: return Transition::push;
     case POPPLER_PAGE_TRANSITION_DISSOLVE: return Transition::dissolve;
+    case POPPLER_PAGE_TRANSITION_GLITTER: return Transition::glitter;
     default: return Transition::switch_page;
   }
 }
