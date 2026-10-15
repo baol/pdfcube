@@ -40,3 +40,5 @@ assert workflow.index("Create release tag") > workflow.index("Verify release ass
 macos_script = macos_packager.read_text()
 assert 'schema_source="$(brew --prefix)/share/glib-2.0/schemas"' in macos_script
 assert "brew --prefix glib" not in macos_script
+assert macos_script.count('-d "${contents}/Frameworks/"') == 3
+assert 'test -s "${contents}/Frameworks/libgtk-4.1.dylib"' in macos_script

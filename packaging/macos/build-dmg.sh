@@ -41,17 +41,18 @@ find "${schema_source}" -maxdepth 1 -name '*.xml' \
 glib-compile-schemas "${contents}/Resources/share/glib-2.0/schemas"
 
 dylibbundler -od -b -x "${contents}/MacOS/pdfcube-bin" \
-  -d "${contents}/Frameworks" -p '@executable_path/../Frameworks/'
+  -d "${contents}/Frameworks/" -p '@executable_path/../Frameworks/'
+test -s "${contents}/Frameworks/libgtk-4.1.dylib"
 
 pixbuf_prefix="$(brew --prefix gdk-pixbuf)"
 cp "${pixbuf_prefix}/bin/gdk-pixbuf-query-loaders" "${contents}/MacOS/"
 cp "${pixbuf_prefix}/lib/gdk-pixbuf-2.0/2.10.0/loaders/"*.so \
   "${contents}/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders/"
 dylibbundler -od -b -x "${contents}/MacOS/gdk-pixbuf-query-loaders" \
-  -d "${contents}/Frameworks" -p '@executable_path/../Frameworks/'
+  -d "${contents}/Frameworks/" -p '@executable_path/../Frameworks/'
 for loader in "${contents}/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders/"*.so; do
   dylibbundler -od -b -x "${loader}" \
-    -d "${contents}/Frameworks" -p '@executable_path/../Frameworks/'
+    -d "${contents}/Frameworks/" -p '@executable_path/../Frameworks/'
 done
 
 cat > "${contents}/MacOS/pdfcube" <<'EOF'
