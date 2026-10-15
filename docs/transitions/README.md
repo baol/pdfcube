@@ -179,6 +179,9 @@ flight direction, with a small individual spin. Both faces remain visible as
 the pieces tumble and fall under restrained gravity, revealing the destination
 beneath them.
 
+After 75% progress, a smooth outward sweep clears the remaining shards by
+95%, leaving the destination unobstructed before the final static frame.
+
 The fracture and motion are closed-form functions of progress: there is no
 runtime randomness or accumulating physics state. All shard vertices are sent
 in one small dynamic GPU buffer and rendered in one draw call. Both page

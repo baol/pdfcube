@@ -102,4 +102,22 @@ int main() {
     }
     assert(count > 0);
   }
+  // Every triangle must be completely outside the view before the final
+  // static frame. A disjoint projected bounding box is a conservative test.
+  for (int step = 95; step <= 100; ++step) {
+    std::vector<pdfcube::ShardVertex> exited;
+    pdfcube::update_glass_shard_vertices(step / 100.0, exited);
+    for (std::size_t i = 0; i < exited.size(); i += 3) {
+      float min_x = 100, min_y = 100, max_x = -100, max_y = -100;
+      for (std::size_t j = i; j < i + 3; ++j) {
+        const auto& vertex = exited[j];
+        const float projection = 4 / (4 - vertex.z);
+        min_x = std::min(min_x, vertex.x * projection);
+        max_x = std::max(max_x, vertex.x * projection);
+        min_y = std::min(min_y, vertex.y * projection);
+        max_y = std::max(max_y, vertex.y * projection);
+      }
+      assert(max_x < -1 || min_x > 1 || max_y < -1 || min_y > 1);
+    }
+  }
 }

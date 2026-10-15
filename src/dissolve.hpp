@@ -131,7 +131,13 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
     const float separation = .0045F * crack + .018F * motion;
-    const float travel = (1.15F + .35F * std::hypot(center_x, center_y)) * motion;
+    // Preserve the readable tumble through 75%, then smoothly clear the
+    // remaining pieces before the renderer switches to the static target.
+    const float exit_progress = std::clamp((position - .75F) / .20F, 0.0F, 1.0F);
+    const float exit_travel = 1.2F * exit_progress * exit_progress *
+                             (3 - 2 * exit_progress);
+    const float travel = (1.15F + .35F * std::hypot(center_x, center_y)) * motion +
+                         exit_travel;
     const float fall = .65F * raw * raw;
     for (const ShardVertex& source : shard.vertices) {
       const float local_x = source.x - center_x;
