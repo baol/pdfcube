@@ -6,7 +6,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 
-generator, release_workflow = map(pathlib.Path, sys.argv[1:])
+generator, release_workflow, macos_packager = map(pathlib.Path, sys.argv[1:])
 with tempfile.TemporaryDirectory() as directory:
     root = pathlib.Path(directory)
     stage = root / "stage"
@@ -36,3 +36,7 @@ for artifact in (
     assert artifact in workflow, artifact
 assert "needs: [prepare, macos, windows]" in workflow
 assert workflow.index("Create release tag") > workflow.index("Verify release assets")
+
+macos_script = macos_packager.read_text()
+assert 'schema_source="$(brew --prefix)/share/glib-2.0/schemas"' in macos_script
+assert "brew --prefix glib" not in macos_script

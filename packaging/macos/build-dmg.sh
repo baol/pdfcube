@@ -31,8 +31,13 @@ cp "${binary}" "${contents}/MacOS/pdfcube-bin"
 cp "${root}/data/org.pdfcube.pdfcube.svg" \
   "${contents}/Resources/share/icons/hicolor/scalable/apps/"
 cp "${root}/LICENSE" "${root}/README.md" "${contents}/Resources/"
-cp "$(brew --prefix glib)/share/glib-2.0/schemas/"*.xml \
-  "${contents}/Resources/share/glib-2.0/schemas/"
+schema_source="$(brew --prefix)/share/glib-2.0/schemas"
+if ! find "${schema_source}" -maxdepth 1 -name '*.xml' -print -quit | grep -q .; then
+  echo "No GLib schemas found in ${schema_source}" >&2
+  exit 1
+fi
+find "${schema_source}" -maxdepth 1 -name '*.xml' \
+  -exec cp {} "${contents}/Resources/share/glib-2.0/schemas/" \;
 glib-compile-schemas "${contents}/Resources/share/glib-2.0/schemas"
 
 dylibbundler -od -b -x "${contents}/MacOS/pdfcube-bin" \

@@ -6,6 +6,7 @@ test(
   args: [
     files('../packaging/windows/generate_wxs.py'),
     files('../.github/workflows/release.yml'),
+    files('../packaging/macos/build-dmg.sh'),
   ],
 )
 
