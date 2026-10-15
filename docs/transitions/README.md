@@ -172,8 +172,11 @@ shallow side faces as well as the classic cube caps.
 Dissolve treats the outgoing page as a thin glass panel. A deterministic mesh
 of 240 irregular triangular shards reacts to a single central impact from
 behind. A fast fracture wave launches the shards radially outward and toward
-the viewer. Motion starts with a sharp impulse and slows under drag while the
-pieces tumble and fall under restrained gravity, revealing the destination
+the viewer. Motion starts with an impulse and slows under gentle drag, keeping
+the pieces in view long enough to follow their rotation. Each rigid shard
+rotates at constant angular velocity about a fixed axis tangent to its radial
+flight direction, with a small individual spin. Both faces remain visible as
+the pieces tumble and fall under restrained gravity, revealing the destination
 beneath them.
 
 The fracture and motion are closed-form functions of progress: there is no
