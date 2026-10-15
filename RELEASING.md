@@ -23,12 +23,14 @@ highest stable tag's patch component; raise the major or minor component in
    lintian --profile ubuntu ../pdfcube_*.changes
    ```
 
-3. Inspect the source archive and Debian package contents. The Debian package
+3. Inspect the source archive and native package contents. The Debian package
    and AppImage must include `showcase.pdf`, `showcase.tex` and `README.md` under
    `usr/share/doc/pdfcube/examples/`. Packaging requires TeX Live with Beamer
    and PGF/TikZ (`texlive-latex-recommended` and `texlive-pictures`). Complete every
    manual rendering smoke test marked as a release requirement in
    `COMPATIBILITY.md`, including Wayland/NVIDIA, X11, Windows, and macOS.
+   Confirm that the DMG opens, its application runs outside Homebrew, the MSI
+   installs and uninstalls cleanly, and both packages display the PDFCube icon.
 4. Commit and merge the release preparation to `master`. Do not create the tag
    manually. For a new release series, change `MIN_VERSION` in the same pull
    request, for example:
@@ -41,8 +43,17 @@ The `master` push starts `.github/workflows/release.yml`. It calculates the
 version, builds and tests on the latest Ubuntu LTS runner, and creates the
 annotated tag only after every artifact succeeds. It then publishes a GitHub
 Release with a `.tar.gz` source archive, an amd64 `.deb`, an x86-64 AppImage,
-`pdfcube-VERSION-showcase.pdf`, and `SHA256SUMS`. GitHub Actions also retains the same files as a workflow
-artifact.
+a macOS `.dmg`, a Windows x86-64 `.msi`, `pdfcube-VERSION-showcase.pdf`, and
+`SHA256SUMS`. GitHub Actions also retains the same files as a workflow artifact.
+
+Linux, macOS, and Windows packages build independently. The publish job waits
+for all three platforms, verifies every expected artifact, and only then creates
+the automatic tag and GitHub Release. Pull requests build and smoke-test the DMG
+and MSI as downloadable workflow artifacts, preventing release-only failures.
+The current automated packages are ad-hoc signed on macOS and unsigned on
+Windows; notarization and Authenticode signing require project-owned signing
+identities and should be added before presenting either package as trusted by
+the operating-system vendor.
 
 The release build explicitly enables `-Dinstall_docs=true` and invokes the
 Meson `doc` target before staging the AppImage. Debian's build rules enable

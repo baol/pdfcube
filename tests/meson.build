@@ -1,5 +1,14 @@
 python = import('python').find_installation('python3')
 
+test(
+  'native release packaging',
+  python,
+  args: [
+    files('../packaging/windows/generate_wxs.py'),
+    files('../.github/workflows/release.yml'),
+  ],
+)
+
 fly_test = executable('fly-test', files('test_fly.cc'),
                       include_directories: include_directories('../src'))
 test('Fly leaf trajectory', fly_test)

@@ -64,21 +64,32 @@ jobs:
 
   macos:
     runs-on: macos-15
+    env:
+      PDFCUBE_VERSION: '0.0.0'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install dependencies
-        run: brew install meson ninja pkg-config gtk4 libepoxy poppler boost
+        run: brew install meson ninja pkg-config gtk4 libepoxy poppler boost dylibbundler librsvg
       - name: Configure
         run: meson setup build -Dwerror=true
       - name: Build
         run: meson compile -C build
       - name: Test command-line interface
         run: meson test -C build "command-line compatibility" --print-errorlogs
+      - name: Build and verify DMG
+        run: packaging/macos/build-dmg.sh build/src/pdfcube 0.0.0 pdfcube-ci-macos.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: pdfcube-ci-macos.dmg
+          if-no-files-found: error
 
   windows:
     runs-on: windows-2025
+    env:
+      PDFCUBE_VERSION: '0.0.0'
     defaults:
       run:
         shell: msys2 {0}
@@ -100,10 +111,20 @@ jobs:
             mingw-w64-ucrt-x86_64-libepoxy
             mingw-w64-ucrt-x86_64-poppler
             mingw-w64-ucrt-x86_64-boost
+            mingw-w64-ucrt-x86_64-imagemagick
+            mingw-w64-ucrt-x86_64-librsvg
+            mingw-w64-ucrt-x86_64-msitools
       - name: Configure
         run: meson setup build -Dwerror=true
       - name: Build
         run: meson compile -C build
       - name: Test command-line interface
         run: meson test -C build "command-line compatibility" --print-errorlogs
+      - name: Build and verify MSI
+        run: packaging/windows/build-msi.sh build/src/pdfcube.exe 0.0.0 pdfcube-ci-x86_64.msi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-msi
+          path: pdfcube-ci-x86_64.msi
+          if-no-files-found: error
 

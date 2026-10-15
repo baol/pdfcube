@@ -151,9 +151,12 @@ Every successful push to `master` creates the next patch release automatically.
 [`MIN_VERSION`](MIN_VERSION) is the release floor: raise its major or minor
 component manually when needed. The workflow creates the corresponding tag and
 a GitHub Release containing the source archive, a Debian package built on the
-latest Ubuntu LTS runner, an x86-64 AppImage, the Beamer showcase PDF, and SHA-256 checksums.
+latest Ubuntu LTS runner, an x86-64 AppImage, a macOS DMG, a Windows x86-64 MSI,
+the Beamer showcase PDF, and SHA-256 checksums. The DMG and MSI contain their
+GTK and supporting runtime libraries and are smoke-tested after packaging.
 
-Debian packaging is maintained in `debian/`. Maintainers should follow
+Debian packaging is maintained in `debian/`; native package assembly lives in
+`packaging/macos/` and `packaging/windows/`. Maintainers should follow
 [RELEASING.md](RELEASING.md) before creating a release tag.
 
 ## License

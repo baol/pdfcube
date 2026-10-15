@@ -12,8 +12,8 @@ PDFCube selects the matching shader dialect after the context is current.
 | Linux | X11, Mesa software GL | Build, CLI, deterministic rendering, sanitizers | Required in CI |
 | Linux | Wayland, Mesa or NVIDIA | Build and CLI in CI | Manual rendering smoke test |
 | Linux | X11, hardware GL | Build and CLI in CI | Manual rendering smoke test |
-| Windows | GTK UCRT64 | Build and CLI in CI | Manual rendering smoke test |
-| macOS | GTK/Homebrew | Build and CLI in CI | Manual rendering smoke test |
+| Windows | GTK UCRT64 | Build, CLI, MSI assembly and extraction smoke test | Manual installed-MSI rendering test |
+| macOS | GTK/Homebrew | Build, CLI, DMG assembly and signature verification | Manual installed-DMG rendering test |
 
 KDE, GNOME, and other desktop environments are not separate renderer targets;
 they are covered through GTK's X11 and Wayland backends. GPU and driver
@@ -23,7 +23,8 @@ combinations are only considered verified after they appear in this matrix.
 
 - OpenGL 2.x and OpenGL ES 2.x
 - Vulkan, Metal, and Direct3D renderers
-- Native Windows installers and macOS application bundles
+- Vendor-trusted Windows Authenticode signatures and Apple notarization
 
-Those targets require separate renderer or packaging work and must not be
-inferred from the portable GTK build alone.
+Those trust integrations require project-owned signing identities. Automated
+CI packages are still checked for complete assembly and basic execution, but
+that does not replace rendering tests on installed native packages.
