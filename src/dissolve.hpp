@@ -90,9 +90,9 @@ inline const std::vector<GlassShard>& glass_shards() {
           result.push_back({
               {vertex(ring[triangle]), vertex(ring[triangle + 1]), vertex(center)},
               .025F * length, direction_x, direction_y,
-              (shard_hash(id * 43U + 13U) - .5F) * 2.2F,
-              (shard_hash(id * 47U + 17U) - .5F) * 1.6F,
-              (shard_hash(id * 59U + 23U) - .5F) * 1.6F});
+              (shard_hash(id * 43U + 13U) - .5F) * 1.2F,
+              direction_y * (2.4F + shard_hash(id * 47U + 17U)),
+              -direction_x * (2.4F + shard_hash(id * 47U + 17U))});
         }
       }
     }
@@ -118,32 +118,34 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
                                      std::max(.01F, 1 - shard.delay),
                                  0.0F, 1.0F);
     // Immediate impulse followed by drag; gravity acts after the impact.
-    const float motion = (1 - std::exp(-3 * raw)) / (1 - std::exp(-3.0F));
-    const float angle = shard.spin * motion;
+    const float motion = (1 - std::exp(-.8F * raw)) / (1 - std::exp(-.8F));
+    // The impact supplies a fixed angular momentum about an axis tangent to
+    // the radial flight direction. Rotate rigidly about that axis throughout
+    // flight, independently of translational drag.
+    const float speed = std::sqrt(shard.tilt_x * shard.tilt_x +
+                                  shard.tilt_y * shard.tilt_y + shard.spin * shard.spin);
+    const float axis_x = shard.tilt_x / speed;
+    const float axis_y = shard.tilt_y / speed;
+    const float axis_z = shard.spin / speed;
+    const float angle = speed * raw;
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
-    const float tilt_x = shard.tilt_x * motion;
-    const float tilt_y = shard.tilt_y * motion;
-    const float cosine_x = std::cos(tilt_x);
-    const float sine_x = std::sin(tilt_x);
-    const float cosine_y = std::cos(tilt_y);
-    const float sine_y = std::sin(tilt_y);
     const float separation = .0045F * crack + .018F * motion;
-    const float travel = 3.2F * motion;
+    const float travel = 2.6F * motion;
     const float fall = .65F * raw * raw;
-    const float shrink = 1 - .14F * motion;
     for (const ShardVertex& source : shard.vertices) {
-      const float local_x = (source.x - center_x) * shrink;
-      const float local_y = (source.y - center_y) * shrink;
-      const float spun_x = local_x * cosine - local_y * sine;
-      const float spun_y = local_x * sine + local_y * cosine;
-      const float pitched_y = spun_y * cosine_x;
-      const float pitched_z = spun_y * sine_x;
-      const float turned_x = spun_x * cosine_y + pitched_z * sine_y;
-      const float turned_z = -spun_x * sine_y + pitched_z * cosine_y;
+      const float local_x = source.x - center_x;
+      const float local_y = source.y - center_y;
+      const float dot = axis_x * local_x + axis_y * local_y;
+      const float turned_x = local_x * cosine - axis_z * local_y * sine +
+                             axis_x * dot * (1 - cosine);
+      const float turned_y = local_y * cosine + axis_z * local_x * sine +
+                             axis_y * dot * (1 - cosine);
+      const float turned_z = (axis_x * local_y - axis_y * local_x) * sine +
+                             axis_z * dot * (1 - cosine);
       result.push_back({
           center_x + turned_x + shard.direction_x * (separation + travel),
-          center_y + pitched_y + shard.direction_y * (separation + travel) - fall,
+          center_y + turned_y + shard.direction_y * (separation + travel) - fall,
           .72F * motion + turned_z, source.u, source.v});
     }
   }

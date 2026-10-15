@@ -15,8 +15,10 @@ int main() {
     assert(shards[index].tilt_y == repeated[index].tilt_y);
     assert(shards[index].delay >= 0 && shards[index].delay <= .3F);
     assert(std::abs(shards[index].spin) <= 1.1F);
-    assert(std::abs(shards[index].tilt_x) <= .8F);
-    assert(std::abs(shards[index].tilt_y) <= .8F);
+    assert(std::abs(shards[index].tilt_x) <= 3.4F);
+    assert(std::abs(shards[index].tilt_y) <= 3.4F);
+    assert(std::abs(shards[index].tilt_x * shards[index].direction_x +
+                    shards[index].tilt_y * shards[index].direction_y) < .00001F);
     assert(std::abs(std::hypot(shards[index].direction_x,
                                shards[index].direction_y) - 1) < .001F);
   }
@@ -66,7 +68,20 @@ int main() {
       dy += drift[3 * i + j].y / 3;
     }
     assert(x * shards[i].direction_x + y * shards[i].direction_y > 0);
-    assert(std::hypot(ex - x, ey - y) > .5F);
+    assert(std::hypot(ex - x, ey - y) > .2F);
+    assert(std::hypot(ex - x, ey - y) < .4F);
     assert(std::hypot(lx - ex, ly - ey) > std::hypot(dx - lx, dy - ly));
+    // Tumbling preserves all three edge lengths (no shrinking or shearing).
+    const auto length = [](const auto& a, const auto& b) {
+      return std::sqrt((a.x - b.x) * (a.x - b.x) +
+                       (a.y - b.y) * (a.y - b.y) +
+                       (a.z - b.z) * (a.z - b.z));
+    };
+    for (std::size_t j = 0; j < 3; ++j) {
+      const auto a = 3 * i + j;
+      const auto b = 3 * i + (j + 1) % 3;
+      assert(std::abs(length(intact[a], intact[b]) -
+                      length(drift[a], drift[b])) < .00001F);
+    }
   }
 }

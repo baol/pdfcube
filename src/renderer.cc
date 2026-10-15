@@ -471,7 +471,10 @@ void Renderer::draw_dissolve(int page, int maximum_size, double progress) {
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture_for_page(page, maximum_size));
   glUniform1i(texture_uniform_, 0);
+  // Glass remains visible when its rotating back face turns toward us.
+  glDisable(GL_CULL_FACE);
   glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(shard_vertices_.size()));
+  glEnable(GL_CULL_FACE);
   glBindVertexArray(vao_);
 }
 
