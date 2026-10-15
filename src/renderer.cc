@@ -6,6 +6,7 @@
 #include "page_flip.hpp"
 #include "fly.hpp"
 #include "push.hpp"
+#include "dissolve.hpp"
 
 #include <algorithm>
 #include <array>
@@ -250,6 +251,20 @@ void Renderer::initialize() {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                         reinterpret_cast<void*>(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+  shard_vertices_.reserve(glass_shards().size() * 3);
+
+  glGenVertexArrays(1, &shard_vao_);
+  glGenBuffers(1, &shard_vbo_);
+  glBindVertexArray(shard_vao_);
+  glBindBuffer(GL_ARRAY_BUFFER, shard_vbo_);
+  glBufferData(GL_ARRAY_BUFFER,
+               static_cast<GLsizeiptr>(shard_vertices_.capacity() * sizeof(ShardVertex)),
+               nullptr, GL_DYNAMIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ShardVertex), nullptr);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ShardVertex),
+                        reinterpret_cast<void*>(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   matrix_uniform_ = glGetUniformLocation(program_, "transform");
   uv_rect_uniform_ = glGetUniformLocation(program_, "uv_rect");
@@ -272,9 +287,11 @@ void Renderer::release() {
     texture = {};
   }
   if (vbo_ != 0) glDeleteBuffers(1, &vbo_);
+  if (shard_vbo_ != 0) glDeleteBuffers(1, &shard_vbo_);
   if (vao_ != 0) glDeleteVertexArrays(1, &vao_);
+  if (shard_vao_ != 0) glDeleteVertexArrays(1, &shard_vao_);
   if (program_ != 0) glDeleteProgram(program_);
-  vbo_ = vao_ = program_ = 0;
+  vbo_ = vao_ = shard_vbo_ = shard_vao_ = program_ = 0;
 }
 
 GLuint Renderer::upload_surface(int page, Surface surface) {
@@ -440,6 +457,24 @@ void Renderer::draw_page(int page, int maximum_size, const float* matrix) {
   glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
+void Renderer::draw_dissolve(int page, int maximum_size, double progress) {
+  update_glass_shard_vertices(progress, shard_vertices_);
+  glBindVertexArray(shard_vao_);
+  glBindBuffer(GL_ARRAY_BUFFER, shard_vbo_);
+  glBufferSubData(GL_ARRAY_BUFFER, 0,
+                  static_cast<GLsizeiptr>(shard_vertices_.size() * sizeof(ShardVertex)),
+                  shard_vertices_.data());
+  const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
+                      translate(0, 0, -flip_camera);
+  glUniformMatrix4fv(matrix_uniform_, 1, GL_FALSE, view.value.data());
+  glUniform1i(textured_uniform_, GL_TRUE);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture_for_page(page, maximum_size));
+  glUniform1i(texture_uniform_, 0);
+  glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(shard_vertices_.size()));
+  glBindVertexArray(vao_);
+}
+
 void Renderer::draw_color(const Color& color, const float* matrix) {
   glUniformMatrix4fv(matrix_uniform_, 1, GL_FALSE, matrix);
   glUniform1i(textured_uniform_, GL_FALSE);
@@ -510,6 +545,18 @@ void Renderer::render(int width, int height, const FrameState& frame) {
                   .88F + pose.outgoing_compression);
       draw_fitted(frame.next_page, pose.incoming,
                   .92F + pose.incoming_compression);
+      return;
+    }
+    if (frame.transition == Transition::dissolve) {
+      const auto& incoming = document_.page_info(frame.next_page);
+      const auto incoming_fit = content_viewport(width, height, incoming.width / incoming.height);
+      glViewport(incoming_fit.x, incoming_fit.y, incoming_fit.width, incoming_fit.height);
+      draw_page(frame.next_page, page_size(frame.next_page),
+                translate(0, 0, .9F).value.data());
+      const auto& outgoing = document_.page_info(frame.current_page);
+      const auto outgoing_fit = content_viewport(width, height, outgoing.width / outgoing.height);
+      glViewport(outgoing_fit.x, outgoing_fit.y, outgoing_fit.width, outgoing_fit.height);
+      draw_dissolve(frame.current_page, page_size(frame.current_page), frame.progress);
       return;
     }
     if (frame.transition != Transition::blinds) {

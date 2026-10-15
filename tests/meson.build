@@ -1,5 +1,9 @@
 python = import('python').find_installation('python3')
 
+dissolve_test = executable('dissolve-test', files('test_dissolve.cc'),
+                           include_directories: include_directories('../src'))
+test('deterministic glass fracture', dissolve_test)
+
 fly_test = executable('fly-test', files('test_fly.cc'),
                       include_directories: include_directories('../src'))
 test('Fly leaf trajectory', fly_test)
@@ -85,6 +89,14 @@ if xvfb_run.found()
     python,
     args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe,
            transition_metadata_test, 'Push'],
+    timeout: 240,
+    env: render_test_environment,
+  )
+  test(
+    'Dissolve rendering and PDF metadata',
+    python,
+    args: [files('test_transitions.py'), xvfb_run.full_path(), pdfcube_exe,
+           transition_metadata_test, 'Dissolve'],
     timeout: 240,
     env: render_test_environment,
   )

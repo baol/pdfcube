@@ -138,6 +138,7 @@ void Application::open_document(const std::string& filename) {
           info.transition_type == POPPLER_PAGE_TRANSITION_UNCOVER ? Transition::uncover :
           info.transition_type == POPPLER_PAGE_TRANSITION_FLY ? Transition::fly :
           info.transition_type == POPPLER_PAGE_TRANSITION_PUSH ? Transition::push :
+          info.transition_type == POPPLER_PAGE_TRANSITION_DISSOLVE ? Transition::dissolve :
           Transition::switch_page;
       durations_[static_cast<std::size_t>(page)] = info.duration_ms;
     }
@@ -179,7 +180,8 @@ void Application::configure_program() {
           effect == "cover" ? Transition::cover :
           effect == "uncover" ? Transition::uncover :
           effect == "fly" ? Transition::fly :
-          effect == "push" ? Transition::push : Transition::switch_page;
+          effect == "push" ? Transition::push :
+          effect == "dissolve" ? Transition::dissolve : Transition::switch_page;
     }
     cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
     transitions_[(page + 1) % document_->page_count()] = last_transition;

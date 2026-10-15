@@ -11,7 +11,7 @@ review, to accepted; a passing build is not visual approval.
 | 3 | Cover / Uncover | Flexible page flips | Curvature, correct front/back mapping |
 | 4 | Fly | A page drifting like a leaf on a controlled gust | Direction, scale, readable flight, controlled landing |
 | 5 | Push | Cube pushes a soft cube | Deterministic contact and recovery |
-| 6 | Dissolve / Glitter | Textured particles / flare and sparks | Stable randomness, bounded memory and brightness |
+| 6 | Dissolve / Glitter | Glass shatter / flare and sparks | Stable geometry, bounded memory and brightness |
 | 7 | Wipe / Fade / Replace | Physical wiper / crossfade / instant | Direction, clean endpoints |
 
 Box keeps the classic cube. Unsupported PDF effects currently replace the page.
@@ -167,6 +167,31 @@ Other directions: [left](push-left.png) and [down](push-down.png). All four
 videos are included in the generated review bundle. `--top-color` controls the
 shallow side faces as well as the classic cube caps.
 
+## Dissolve: experimental, awaiting visual approval
+
+Dissolve treats the outgoing page as a thin glass panel. A deterministic mesh
+of 240 irregular triangular shards reacts to two off-centre impacts. During the
+first tenth of the transition the triangles separate by only a hairline, making
+the crack network appear while the page remains readable. The shards then
+detach in overlapping waves, tumble in three dimensions, drift away from their
+nearest impact, move toward the viewer and fall under restrained gravity,
+revealing the destination beneath them.
+
+The fracture and motion are closed-form functions of progress: there is no
+runtime randomness or accumulating physics state. All shard vertices are sent
+in one small dynamic GPU buffer and rendered in one draw call. Both page
+textures are prepared at full output resolution before motion begins. The exact
+0% and 100% frames bypass the fracture mesh and draw the static source and
+destination pages without cracks, seams or reduced resolution.
+
+Try the committed [Dissolve example](../../examples/transitions/dissolve.pdf).
+Its five-frame review capture uses the same fixture and renderer as the tests:
+
+![Glass-shatter Dissolve](dissolve.png)
+
+`--program duration:dissolve` selects the effect with the normal 750 ms
+programmed duration. PDF `/Trans /D` controls document-driven duration.
+
 ## Reproduce the review bundle
 
 Install Pillow and ffmpeg in addition to the normal build/test dependencies:
@@ -198,8 +223,8 @@ same process and add their own fixtures and gallery entry.
 
 ## Validation record
 
-Blinds, Split, Cover/Uncover, Fly and Push: Ubuntu 24.04, GTK 4.14.5, Poppler 24.02,
-Xvfb/software OpenGL. All nineteen tests passed with warnings treated as errors,
+Blinds, Split, Cover/Uncover, Fly, Push and Dissolve: Ubuntu 24.04, GTK 4.14.5,
+Poppler 24.02, Xvfb/software OpenGL. Tests pass with warnings treated as errors,
 both normally and with address/undefined-behavior sanitizers.
 The horizontal and vertical contact sheets were inspected for direction and
 readable reverse faces. Page-flip captures were inspected for curvature,
@@ -227,6 +252,9 @@ native-platform or motion approval.
 - Push checks cover all four PDF directions, default/invalid direction fallback,
   monotonic contact, bounded squash/stretch/wobble, PDF metadata, program
   selection, deterministic rendering, exact endpoints and reproducible examples.
+- Dissolve checks deterministic fracture geometry, bounded shard parameters,
+  portrait/landscape/mixed ratios, PDF metadata, program selection, distinct
+  sampled stages, exact endpoints and a reproducible example.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
   native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback
   memory checks. Still-frame and geometry checks are not substitutes for these.

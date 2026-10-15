@@ -1,6 +1,7 @@
 #pragma once
 
 #include "document.hpp"
+#include "dissolve.hpp"
 #include "options.hpp"
 
 #include <epoxy/gl.h>
@@ -15,13 +16,15 @@
 namespace pdfcube {
 
 enum class Transition {
-  none, cube_forward, cube_backward, switch_page, blinds, split, cover, uncover, fly, push
+  none, cube_forward, cube_backward, switch_page, blinds, split, cover, uncover, fly, push,
+  dissolve
 };
 
 inline bool page_effect(Transition transition) {
   return transition == Transition::blinds || transition == Transition::split ||
          transition == Transition::cover || transition == Transition::uncover ||
-         transition == Transition::fly || transition == Transition::push;
+         transition == Transition::fly || transition == Transition::push ||
+         transition == Transition::dissolve;
 }
 
 struct FrameState {
@@ -79,6 +82,7 @@ class Renderer {
   void render_pages_in_background();
   void preload_neighbors(int page, int maximum_size);
   void draw_page(int page, int maximum_size, const float* matrix);
+  void draw_dissolve(int page, int maximum_size, double progress);
   void draw_color(const Color& color, const float* matrix);
 
   Document& document_;
@@ -87,6 +91,8 @@ class Renderer {
   GLuint program_{0};
   GLuint vao_{0};
   GLuint vbo_{0};
+  GLuint shard_vao_{0};
+  GLuint shard_vbo_{0};
   GLint matrix_uniform_{-1};
   GLint texture_uniform_{-1};
   GLint color_uniform_{-1};
@@ -103,6 +109,7 @@ class Renderer {
   std::thread render_thread_;
   bool stop_render_thread_{false};
   bool idle_preparation_pending_{false};
+  std::vector<ShardVertex> shard_vertices_;
 };
 
 }  // namespace pdfcube

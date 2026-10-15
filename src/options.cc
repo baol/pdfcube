@@ -64,7 +64,7 @@ ParseResult parse_options(int argc, char** argv) {
       ("demo", po::value<bool>()->implicit_value(true),
        "Auto-advance using PDF or programmed durations.")
       ("program", po::value<std::string>(),
-       "Transition program duration:type pairs (c, p, blinds, split, cover, uncover, fly, push), for example 5:c:3:p.")
+       "Transition program duration:type pairs (c, p, blinds, split, cover, uncover, fly, push, dissolve), for example 5:c:3:p.")
       ("performance-log", po::value<std::string>(),
        "Write buffered animation frame timings to a CSV file on exit.")
       ("no-fullscreen,n", po::value<bool>()->implicit_value(true),

@@ -10,7 +10,8 @@ Cover/Uncover use curved page flips in all four directions. These have
 reproducible screenshots and review videos linked from the roadmap.
 Fly adds a controlled leaf-like drift in arbitrary PDF directions, with the
 same reproducible review assets. Push transfers momentum between two softly
-compressing slide blocks in all four PDF directions.
+compressing slide blocks in all four PDF directions. Dissolve fractures the
+outgoing slide into deterministic glass shards that clear to reveal the next page.
 
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 

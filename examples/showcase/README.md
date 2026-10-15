@@ -66,7 +66,7 @@ first slide at any time, or `t` to toggle automatic playback.
 - Push and Wipe: all four cardinal directions.
 - Dissolve, Glitter (right/down/lower right), Fade and Replace.
 
-Push, Dissolve, Glitter, Wipe and Fade currently fall back to an instant change
+Glitter, Wipe and Fade currently fall back to an instant change
 in PDFCube. Their slides say so; they preserve the real PDF metadata to provide
 a showcase as these effects are implemented. Other viewers may implement them
 or ignore PDF transitions entirely. Replace is deliberately instant.
