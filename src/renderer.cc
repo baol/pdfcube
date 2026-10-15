@@ -99,8 +99,13 @@ CubePose legacy_cube_pose(double progress, bool forward) {
   return {interpolate(angle) * pi / 180.0F, interpolate(camera_y), interpolate(camera_z)};
 }
 
-const char* desktop_vertex_shader = R"(
-#version 130
+#ifdef __APPLE__
+#define PDFCUBE_DESKTOP_GLSL_VERSION "#version 150\n"
+#else
+#define PDFCUBE_DESKTOP_GLSL_VERSION "#version 130\n"
+#endif
+
+const char* desktop_vertex_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
 in vec3 position;
 in vec2 texture_coordinate;
 uniform mat4 transform;
@@ -112,8 +117,7 @@ void main() {
 }
 )";
 
-const char* desktop_fragment_shader = R"(
-#version 130
+const char* desktop_fragment_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
 in vec2 uv;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
@@ -125,6 +129,8 @@ void main() {
   output_color.rgb *= shade;
 }
 )";
+
+#undef PDFCUBE_DESKTOP_GLSL_VERSION
 
 const char* es_vertex_shader = R"(
 #version 300 es

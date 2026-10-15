@@ -65,7 +65,13 @@ void Application::activate(GtkApplication* application) {
   area_ = gtk_gl_area_new();
   gtk_gl_area_set_allowed_apis(
       GTK_GL_AREA(area_), static_cast<GdkGLAPI>(GDK_GL_API_GL | GDK_GL_API_GLES));
+#ifdef __APPLE__
+  // macOS exposes either legacy OpenGL 2.1 or a 3.2 core context. Requesting
+  // 3.0 can select the legacy context, which cannot compile our GLSL shaders.
+  gtk_gl_area_set_required_version(GTK_GL_AREA(area_), 3, 2);
+#else
   gtk_gl_area_set_required_version(GTK_GL_AREA(area_), 3, 0);
+#endif
   gtk_gl_area_set_has_depth_buffer(GTK_GL_AREA(area_), true);
   gtk_widget_set_hexpand(area_, true);
   gtk_widget_set_vexpand(area_, true);
