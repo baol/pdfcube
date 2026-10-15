@@ -13,6 +13,7 @@ motion = sys.argv[5] if len(sys.argv) > 5 else "I"
 flip = effect in ("Cover", "Uncover")
 fly = effect == "Fly"
 push = effect == "Push"
+dissolve = effect == "Dissolve"
 environment = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1")
 
 with tempfile.TemporaryDirectory() as directory:
@@ -50,8 +51,13 @@ with tempfile.TemporaryDirectory() as directory:
             [("H", angle) for angle in range(0, 360, 45)] if fly else [("H", None), ("V", None)]
     if push:
         cases = [("H", angle) for angle in (0, 90, 180, 270)]
+    if dissolve:
+        cases = [("H", None)]
     for orientation, angle in cases:
-        dimensions = (((640, 360), (640, 360)),) if fly and angle not in (0, 90) else \
+        dimensions = (((640, 360), (640, 360)),
+                      ((360, 640), (360, 640)),
+                      ((640, 360), (360, 640))) if dissolve else \
+                     (((640, 360), (640, 360)),) if fly and angle not in (0, 90) else \
                      (((640, 360), (640, 360)), ((360, 640), (360, 640)),
                       ((640, 360), (360, 640)))
         for sizes in dimensions:
@@ -103,7 +109,7 @@ with tempfile.TemporaryDirectory() as directory:
             quarter, three_quarters = capture(deck, .25), capture(deck, .75)
             assert len({start, quarter, middle, three_quarters, end}) == 5, "cascade stalled"
             middles.append(middle)
-    if fly or push:
+    if fly or push or dissolve:
         assert len(set(middles)) == len(middles), f"{effect} direction or page ratio ignored"
     else:
         assert len(set(middles[::3])) == len(cases), "orientation/direction ignored"

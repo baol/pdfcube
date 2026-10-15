@@ -22,6 +22,7 @@ Ready-to-open diagnostic slides:
   [lower right](fly-out-down-right.pdf)
 - Push: [right](push-right.pdf), [up](push-up.pdf),
   [left](push-left.pdf), [down](push-down.pdf)
+- [Dissolve](dissolve.pdf)
 
 From the repository root:
 
@@ -44,6 +45,8 @@ Fly drifts the page like a leaf along a shallow 3D arc, with a restrained bank
 and flutter that settle completely at the endpoint.
 Push treats the pages as shallow padded blocks: the incoming block contacts and
 briefly compresses against the outgoing block while transferring its momentum.
+Dissolve forms an irregular crack network, then breaks the outgoing page into
+glass-like shards that tumble outward and toward the viewer to reveal the destination.
 
 Regenerate all PDFs deterministically with Python's standard library:
 

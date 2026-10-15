@@ -29,6 +29,8 @@ PDF Push treats both pages as shallow padded blocks. The incoming page transfers
 momentum to the outgoing page; both compress briefly at their shared contact
 edge and recover fully. PDF direction selects right, up, left, or down; missing
 or unsupported angles default to right.
+PDF Dissolve cracks the outgoing page into irregular glass-like shards, then
+moves the fragments away to reveal the destination page.
 Other unsupported PDF transitions currently change pages instantly.
 PDF transition duration controls the animation; page duration controls how
 long automatic playback displays a slide. These are separate values.
@@ -75,6 +77,8 @@ direction, motion and starting scale.
 .B push
 selects the soft-block Push effect with a 750 ms animation and the document's
 direction.
+.B dissolve
+selects the glass-shatter Dissolve effect with a 750 ms animation.
 The last pair is repeated for remaining slides.
 For example,
 .B \-\-program 5:c:3:p
