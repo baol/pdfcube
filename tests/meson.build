@@ -4,6 +4,7 @@ test(
   'native release packaging',
   python,
   args: [
+    files('test_native_packaging.py'),
     files('../packaging/windows/generate_wxs.py'),
     files('../.github/workflows/release.yml'),
     files('../packaging/macos/build-dmg.sh'),
