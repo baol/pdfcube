@@ -38,9 +38,11 @@ class Application {
   void toggle_zoom(ZoomRegion region);
   void reset_zoom();
   void schedule_auto_advance(bool allow_immediate = false);
+  void write_performance_log() const;
   FrameState frame_state() const;
   bool handle_key(guint keyval, GdkModifierType state);
   double animation_progress() const;
+  gint64 animation_time() const;
   bool busy() const;
 
   Options options_;
@@ -57,6 +59,7 @@ class Application {
   Transition transition_{Transition::none};
   gint64 transition_started_{0};
   gint64 transition_length_us_{750000};
+  gint64 frame_time_us_{0};
   bool transition_preparing_{false};
   ZoomRegion zoom_region_{ZoomRegion::none};
   bool zoom_reversing_{false};
@@ -67,6 +70,16 @@ class Application {
   bool reload_renderer_{false};
   bool snapshot_written_{false};
   std::string startup_error_;
+  struct FrameTiming {
+    gint64 frame_time_us;
+    gint64 frame_interval_us;
+    gint64 cpu_submit_us;
+    int transition;
+    double progress;
+    bool preparing;
+  };
+  std::vector<FrameTiming> frame_timings_;
+  gint64 previous_animation_frame_us_{0};
 };
 
 }  // namespace pdfcube
