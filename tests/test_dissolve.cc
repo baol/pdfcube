@@ -68,9 +68,15 @@ int main() {
       dy += drift[3 * i + j].y / 3;
     }
     assert(x * shards[i].direction_x + y * shards[i].direction_y > 0);
-    assert(std::hypot(ex - x, ey - y) > .2F);
+    assert(std::hypot(ex - x, ey - y) > .1F);
     assert(std::hypot(ex - x, ey - y) < .4F);
-    assert(std::hypot(lx - ex, ly - ey) > std::hypot(dx - lx, dy - ly));
+    // Remove gravitational displacement before measuring translational drag.
+    const auto gravity = [&](float p) {
+      const float age = std::clamp((p - shards[i].delay) / (1 - shards[i].delay), 0.0F, 1.0F);
+      return .65F * age * age;
+    };
+    assert(std::hypot(lx - ex, ly - ey + gravity(.2F) - gravity(.1F)) >
+           std::hypot(dx - lx, dy - ly + gravity(.3F) - gravity(.2F)));
     // Tumbling preserves all three edge lengths (no shrinking or shearing).
     const auto length = [](const auto& a, const auto& b) {
       return std::sqrt((a.x - b.x) * (a.x - b.x) +
@@ -83,5 +89,17 @@ int main() {
       assert(std::abs(length(intact[a], intact[b]) -
                       length(drift[a], drift[b])) < .00001F);
     }
+  }
+  // Interior projected vertices guarantee visible geometry during the tumble.
+  for (double progress : {.5, .75}) {
+    std::vector<pdfcube::ShardVertex> visible;
+    pdfcube::update_glass_shard_vertices(progress, visible);
+    int count = 0;
+    for (const auto& vertex : visible) {
+      const float projection = 4 / (4 - vertex.z);
+      if (std::abs(vertex.x * projection) < .98F &&
+          std::abs(vertex.y * projection) < .98F) ++count;
+    }
+    assert(count > 0);
   }
 }

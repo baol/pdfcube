@@ -131,7 +131,7 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
     const float separation = .0045F * crack + .018F * motion;
-    const float travel = 2.6F * motion;
+    const float travel = (1.15F + .35F * std::hypot(center_x, center_y)) * motion;
     const float fall = .65F * raw * raw;
     for (const ShardVertex& source : shard.vertices) {
       const float local_x = source.x - center_x;
