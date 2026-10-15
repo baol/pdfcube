@@ -48,10 +48,10 @@ pixbuf_prefix="$(brew --prefix gdk-pixbuf)"
 cp "${pixbuf_prefix}/bin/gdk-pixbuf-query-loaders" "${contents}/MacOS/"
 cp "${pixbuf_prefix}/lib/gdk-pixbuf-2.0/2.10.0/loaders/"*.so \
   "${contents}/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders/"
-dylibbundler -od -b -x "${contents}/MacOS/gdk-pixbuf-query-loaders" \
+dylibbundler -of -b -x "${contents}/MacOS/gdk-pixbuf-query-loaders" \
   -d "${contents}/Frameworks/" -p '@executable_path/../Frameworks/'
 for loader in "${contents}/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders/"*.so; do
-  dylibbundler -od -b -x "${loader}" \
+  dylibbundler -of -b -x "${loader}" \
     -d "${contents}/Frameworks/" -p '@executable_path/../Frameworks/'
 done
 
