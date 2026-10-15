@@ -1,0 +1,2 @@
+option('install_docs', type: 'boolean', value: false,
+       description: 'Install the Beamer showcase PDF and editable source')

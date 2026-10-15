@@ -38,6 +38,8 @@ configured_manpage = configure_file(
 subdir('src')
 subdir('tests')
 
+subdir('examples/showcase')
+
 if host_machine.system() != 'windows' and host_machine.system() != 'darwin'
   install_data(
     'org.pdfcube.pdfcube.desktop',

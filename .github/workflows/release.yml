@@ -49,12 +49,13 @@ jobs:
             libgl1-mesa-dri \
             libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
             libboost-program-options-dev appstream desktop-file-utils \
-            debhelper lintian wget file
+            debhelper lintian wget file texlive-latex-recommended texlive-pictures
 
       - name: Configure, build, and test
         run: |
-          meson setup build --buildtype=release -Dwerror=true --prefix=/usr
+          meson setup build --buildtype=release -Dwerror=true --prefix=/usr -Dinstall_docs=true
           meson compile -C build
+          meson compile -C build doc
           meson test -C build --print-errorlogs
           desktop-file-validate org.pdfcube.pdfcube.desktop
           appstreamcli validate --pedantic --no-net build/org.pdfcube.pdfcube.metainfo.xml
@@ -69,6 +70,10 @@ jobs:
             "1s/\([^)]*\) unstable;/(${PDFCUBE_VERSION}-1ubuntu1) ${ubuntu_codename};/" \
             debian/changelog
           dpkg-buildpackage -us -uc -b
+          dpkg-deb --extract ../pdfcube_*_amd64.deb build/deb-doc-check
+          for name in showcase.pdf showcase.tex README.md; do
+            test -s "build/deb-doc-check/usr/share/doc/pdfcube/examples/${name}"
+          done
           lintian --profile ubuntu ../pdfcube_*.changes
 
       - name: Build AppImage
@@ -78,6 +83,9 @@ jobs:
           DEPLOY_GTK_VERSION: '4'
         run: |
           DESTDIR="${PWD}/AppDir" meson install -C build
+          test -s AppDir/usr/share/doc/pdfcube/examples/showcase.pdf
+          test -s AppDir/usr/share/doc/pdfcube/examples/showcase.tex
+          test -s AppDir/usr/share/doc/pdfcube/examples/README.md
           wget --https-only \
             https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
           wget --https-only \
@@ -112,6 +120,7 @@ jobs:
           cp "build/meson-dist/pdfcube-${VERSION}.tar.gz" release-assets/
           cp ../pdfcube_*_amd64.deb release-assets/
           cp "pdfcube-${VERSION}-x86_64.AppImage" release-assets/
+          cp build/examples/showcase/showcase.pdf "release-assets/pdfcube-${VERSION}-showcase.pdf"
           cd release-assets
           sha256sum * > SHA256SUMS
 

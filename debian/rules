@@ -13,3 +13,14 @@ override_dh_autoreconf_clean:
 
 override_dh_auto_test:
 	xvfb-run -a dh_auto_test
+
+override_dh_auto_configure:
+	dh_auto_configure -- -Dinstall_docs=true
+
+override_dh_auto_build:
+	dh_auto_build
+	dh_auto_build -- doc
+
+# Keep the editable example and its relative README links usable as installed.
+override_dh_compress:
+	dh_compress -Xusr/share/doc/pdfcube/examples/

@@ -3,6 +3,8 @@
 The [transition roadmap and review gallery](docs/transitions/README.md) describes
 new effects, their validation gates, and how to generate videos and contact sheets.
 Ready-to-open [example PDFs](examples/transitions/README.md) are included.
+A self-contained [LaTeX/Beamer showcase](examples/showcase/README.md) covers
+all standard PDF transitions with vector artwork and next-effect labels.
 Blinds uses cascading slats; Split uses opening/closing 3D doors;
 Cover/Uncover use curved page flips in all four directions. These have
 reproducible screenshots and review videos linked from the roadmap.
@@ -67,6 +69,11 @@ meson test -C build --print-errorlogs
 sudo meson install -C build
 ```
 
+Build the Beamer showcase explicitly with `meson compile -C build doc`.
+This documentation target requires TeX Live with Beamer and PGF/TikZ;
+see the [showcase build instructions](examples/showcase/README.md).
+The default application build does not build documentation.
+
 For a local build without installation:
 
 ```sh
@@ -124,7 +131,7 @@ Every successful push to `master` creates the next patch release automatically.
 [`MIN_VERSION`](MIN_VERSION) is the release floor: raise its major or minor
 component manually when needed. The workflow creates the corresponding tag and
 a GitHub Release containing the source archive, a Debian package built on the
-latest Ubuntu LTS runner, an x86-64 AppImage, and SHA-256 checksums.
+latest Ubuntu LTS runner, an x86-64 AppImage, the Beamer showcase PDF, and SHA-256 checksums.
 
 Debian packaging is maintained in `debian/`. Maintainers should follow
 [RELEASING.md](RELEASING.md) before creating a release tag.
