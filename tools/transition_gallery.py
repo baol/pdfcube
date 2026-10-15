@@ -32,17 +32,21 @@ if args.jobs < 1:
 
 # Starting a fresh X server for every frame dominates the gallery runtime. Keep
 # xvfb-run as the portable display allocator, but use it once for the complete
-# gallery and let the child processes share that display.
+# gallery and let the child processes share that display. Disable server resets:
+# between snapshot batches the last client can disconnect while another capture
+# is connecting, otherwise briefly making the shared display unavailable.
 if not args.inside_xvfb:
     xvfb_run = shutil.which("xvfb-run")
     if not xvfb_run:
         parser.error("xvfb-run is required")
-    command = [xvfb_run, "-a", sys.executable, str(Path(__file__).resolve()),
+    command = [xvfb_run, "-a", "--server-args=-screen 0 1280x1024x24 -noreset",
+               sys.executable, str(Path(__file__).resolve()),
                *sys.argv[1:], "--inside-xvfb"]
     raise SystemExit(subprocess.run(command).returncode)
 
 args.output.mkdir(parents=True, exist_ok=True)
-env = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1")
+env = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1",
+           GTK_A11Y="none")
 examples = [entry for entry in EXAMPLES if not args.effects or entry[1] in args.effects]
 for name, effect, orientation, motion, angle in examples:
     folder = args.output / name
