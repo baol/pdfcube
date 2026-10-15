@@ -23,11 +23,12 @@
 % #5 artwork seed; #6 background colour; #7 support status.
 \newcommand{\ShowSlide}[7]{%
   \setbeamercolor{background canvas}{bg=#6}%
-  \begin{frame}[plain]
-    \hypersetup{pdfpagetransition={#1}}%
-    \transduration{\ShowcaseDwell}%
-    \begin{tikzpicture}[remember picture,overlay,x=1cm,y=1cm]
-      \begin{scope}[shift={(current page.south west)}]
+  % Draw in Beamer's page-sized background, without remembered coordinates.
+  % This keeps the origin at the paper corner even on the first LaTeX pass.
+  \setbeamertemplate{background}{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \path[use as bounding box] (0,0) rectangle (16,9);
+      \begin{scope}
         \clip (0,0) rectangle (16,9);
         \fill[white,opacity=.035] (7.5,0) rectangle (16,9);
         % Fine full-height lines make motion and page boundaries easy to see.
@@ -86,7 +87,12 @@
         \node[anchor=south west,text=cream!65!#6,font=\scriptsize] at (.8,.35) {SPACE / PAGE DOWN TO ADVANCE};
         \node[anchor=south east,text=cream,font=\small] at (15.2,.35) {\insertframenumber};
       \end{scope}
-    \end{tikzpicture}
+    \end{tikzpicture}%
+  }%
+  \begin{frame}[plain]
+    \hypersetup{pdfpagetransition={#1}}%
+    \transduration{\ShowcaseDwell}%
+    \null
   \end{frame}%
 }
 \begin{document}

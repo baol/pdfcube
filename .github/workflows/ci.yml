@@ -7,6 +7,25 @@ on:
   pull_request:
 
 jobs:
+  showcase:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-recommended texlive-pictures
+      - name: Compile Beamer showcase
+        run: |
+          mkdir -p build/showcase
+          pdflatex -interaction=nonstopmode -halt-on-error -output-directory=build/showcase examples/showcase/showcase.tex
+          pdflatex -interaction=nonstopmode -halt-on-error -output-directory=build/showcase examples/showcase/showcase.tex
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beamer-showcase
+          path: build/showcase/showcase.pdf
+          if-no-files-found: error
+
   linux:
     runs-on: ubuntu-24.04
     steps:
