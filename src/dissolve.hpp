@@ -117,8 +117,10 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float raw = std::clamp((position - shard.delay) /
                                      std::max(.01F, 1 - shard.delay),
                                  0.0F, 1.0F);
-    // Immediate impulse followed by drag; gravity acts after the impact.
-    const float motion = (1 - std::exp(-.8F * raw)) / (1 - std::exp(-.8F));
+    // A continuous impulse curve builds outward speed through the flight,
+    // giving the pieces time to tumble before they clear the page.
+    const float motion = raw - (16.0F / 15.0F) * raw * raw +
+                         (16.0F / 15.0F) * raw * raw * raw;
     // The impact supplies a fixed angular momentum about an axis tangent to
     // the radial flight direction. Rotate rigidly about that axis throughout
     // flight, independently of translational drag.
@@ -131,13 +133,23 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
     const float separation = .0045F * crack + .018F * motion;
-    // Preserve the readable tumble through 75%, then smoothly clear the
-    // remaining pieces before the renderer switches to the static target.
-    const float exit_progress = std::clamp((position - .75F) / .20F, 0.0F, 1.0F);
-    const float exit_travel = 1.2F * exit_progress * exit_progress *
-                             (3 - 2 * exit_progress);
-    const float travel = (1.15F + .35F * std::hypot(center_x, center_y)) * motion +
-                         exit_travel;
+    // Choose the whole trajectory at launch. A bounding radius covers every
+    // orientation, so each piece crosses an edge by 95% without a late boost.
+    float radius = 0;
+    for (const auto& vertex : shard.vertices)
+      radius = std::max(radius, std::hypot(vertex.x - center_x, vertex.y - center_y));
+    const float exit_x = std::abs(shard.direction_x) > .001F ?
+        (1 + radius - std::copysign(1.0F, shard.direction_x) * center_x) /
+            std::abs(shard.direction_x) : 1000;
+    // Allow the full downward gravitational displacement for upward shards;
+    // downward shards need no assistance from gravity to clear the edge.
+    const float exit_y = std::abs(shard.direction_y) > .001F ?
+        (1 + radius - std::copysign(1.0F, shard.direction_y) * center_y +
+         (shard.direction_y > 0 ? .65F : 0)) / std::abs(shard.direction_y) : 1000;
+    const float exit_age = (.95F - shard.delay) / (1 - shard.delay);
+    const float exit_motion = exit_age - (16.0F / 15.0F) * exit_age * exit_age +
+                              (16.0F / 15.0F) * exit_age * exit_age * exit_age;
+    const float travel = std::min(exit_x, exit_y) * motion / exit_motion;
     const float fall = .65F * raw * raw;
     for (const ShardVertex& source : shard.vertices) {
       const float local_x = source.x - center_x;

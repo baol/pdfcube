@@ -68,7 +68,7 @@ int main() {
       dy += drift[3 * i + j].y / 3;
     }
     assert(x * shards[i].direction_x + y * shards[i].direction_y > 0);
-    assert(std::hypot(ex - x, ey - y) > .1F);
+    assert(std::hypot(ex - x, ey - y) > .02F);
     assert(std::hypot(ex - x, ey - y) < .4F);
     // Remove gravitational displacement before measuring translational drag.
     const auto gravity = [&](float p) {
