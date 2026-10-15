@@ -98,7 +98,15 @@ options remain available:
 - `--no-fullscreen` starts in a window.
 
 When no PDF is supplied, PDFCube opens a GTK file chooser. Options can also
-be stored in `~/.pdfcuberc`; command-line values take precedence.
+be stored in `~/.pdfcuberc`; command-line values take precedence. On Windows,
+`USERPROFILE` is used when `HOME` is absent. Each launch opens its own instance;
+cancelling the initial file chooser exits successfully.
+
+Programs require complete `duration:effect` pairs, finite nonnegative durations
+that fit a signed 32-bit millisecond timer, and documented effect names. The
+last pair repeats for remaining slides. Invalid programs are rejected before
+opening a window. Demo mode waits on slides with no positive duration; manual
+navigation restarts the timer for the destination slide.
 
 Common controls include Space or Page Down to advance, `c`/`a` for forward
 and backward cube transitions, arrow keys for plain navigation, `h`/`j`/`k`/
@@ -115,7 +123,9 @@ See `man pdfcube` for the full list.
 
 PDFCube follows GTK's compositor-synchronized frame clock rather than imposing
 a fixed frame rate. Full-resolution previous and next pages are rendered in the
-background and uploaded to the GPU while the current slide is idle. If a page
+background, converted to RGBA in the worker, and uploaded to the GPU while the
+current slide is idle. The frame callback stops once animation and preparation
+have finished. If a page
 is not ready when navigation is requested, the transition remains at its exact
 first frame until preparation finishes; PDF rendering and texture upload do not
 consume the active animation clock.

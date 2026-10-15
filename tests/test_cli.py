@@ -57,3 +57,35 @@ with tempfile.TemporaryDirectory() as directory:
     configured = run("--help", home=home)
     assert configured.returncode == 0
 
+
+for program in ("inf:c", "nan:p", "1e100:c", "-1:c", "abc:c", "5:blind",
+                "5", "5:c:", "5:c:bad:p", "5:c:3:", "", "5:c:1e100:p"):
+    invalid = run("--program", program, "unused.pdf")
+    assert invalid.returncode == 2, (program, invalid.returncode, invalid.stderr)
+    assert "program" in invalid.stderr, invalid.stderr
+
+for arguments in (("--bgcolor", "nan:0:0"), ("--snapshot-progress", "nan"),
+                  ("--snapshot-progress", "inf")):
+    invalid = run(*arguments)
+    assert invalid.returncode == 2, (arguments, invalid.stderr)
+
+with tempfile.TemporaryDirectory() as directory:
+    home = pathlib.Path(directory)
+    (home / ".pdfcuberc").write_text("unknown-setting=true\n")
+    for argument in ("--help", "--version"):
+        result = run(argument, home=home)
+        assert result.returncode == 0, result.stderr
+
+with tempfile.TemporaryDirectory() as directory:
+    home = pathlib.Path(directory)
+    for content in ("unknown-setting=true\n", "bgcolor=nan:0:0\n", "demo=invalid\n"):
+        (home / ".pdfcuberc").write_text(content)
+        invalid = run(home=home)
+        assert invalid.returncode == 2, invalid.stderr
+        assert "Configuration file parsing error" in invalid.stderr, invalid.stderr
+
+for switch in ("--no-fullscreen", "-n", "--demo"):
+    result = run(switch, "unused.pdf", "--help")
+    assert result.returncode == 0, (switch, result.stderr)
+
+assert run("--help", "--", "--demo").returncode == 0

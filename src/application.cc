@@ -35,8 +35,7 @@ void require_gl_context(GtkGLArea* area) {
 Application::Application(Options options) : options_(std::move(options)) {}
 
 int Application::run() {
-  const GApplicationFlags flags = options_.snapshot.empty()
-      ? G_APPLICATION_DEFAULT_FLAGS : G_APPLICATION_NON_UNIQUE;
+  const GApplicationFlags flags = G_APPLICATION_NON_UNIQUE;
   application_ = gtk_application_new("org.pdfcube.pdfcube", flags);
   g_application_set_resource_base_path(G_APPLICATION(application_), "/org/pdfcube/pdfcube");
   g_signal_connect(application_, "activate", G_CALLBACK(activate_callback), this);
@@ -58,6 +57,10 @@ void Application::activate_callback(GtkApplication* application, gpointer data) 
 }
 
 void Application::activate(GtkApplication* application) {
+  if (window_ != nullptr) {
+    gtk_window_present(GTK_WINDOW(window_));
+    return;
+  }
   window_ = gtk_application_window_new(application);
   gtk_window_set_title(GTK_WINDOW(window_), "PDFCube");
   gtk_window_set_default_size(GTK_WINDOW(window_), 960, 720);
@@ -82,7 +85,7 @@ void Application::activate(GtkApplication* application) {
   GtkEventController* keys = gtk_event_controller_key_new();
   g_signal_connect(keys, "key-pressed", G_CALLBACK(key_callback), this);
   gtk_widget_add_controller(window_, keys);
-  gtk_widget_add_tick_callback(area_, tick_callback, this, nullptr);
+
   gtk_window_set_child(GTK_WINDOW(window_), area_);
   if (options_.fullscreen) gtk_window_fullscreen(GTK_WINDOW(window_));
   gtk_window_present(GTK_WINDOW(window_));
@@ -115,8 +118,13 @@ void Application::file_open_callback(GObject* source, GAsyncResult* result, gpoi
     if (path != nullptr) self->open_document(path);
     g_free(path);
     g_object_unref(file);
-  } else if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-    self->startup_error_ = std::string("Could not open PDF: ") + error->message;
+  } else if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED) ||
+             g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED) ||
+             g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED)) {
+    g_application_quit(G_APPLICATION(self->application_));
+  } else {
+    self->startup_error_ = std::string("Could not open PDF: ") +
+        (error != nullptr ? error->message : "unknown error");
     g_application_quit(G_APPLICATION(self->application_));
   }
   g_clear_error(&error);
@@ -125,12 +133,10 @@ void Application::file_open_callback(GObject* source, GAsyncResult* result, gpoi
 void Application::open_document(const std::string& filename) {
   try {
     document_ = std::make_unique<Document>(filename);
-    cube_transitions_.resize(static_cast<std::size_t>(document_->page_count()));
     transitions_.resize(static_cast<std::size_t>(document_->page_count()));
     durations_.resize(static_cast<std::size_t>(document_->page_count()));
     for (int page = 0; page < document_->page_count(); ++page) {
       const PageInfo& info = document_->page_info(page);
-      cube_transitions_[static_cast<std::size_t>(page)] = info.cube_transition;
       transitions_[page] = info.cube_transition ? Transition::cube_forward :
           info.transition_type == POPPLER_PAGE_TRANSITION_BLINDS ? Transition::blinds :
           info.transition_type == POPPLER_PAGE_TRANSITION_SPLIT ? Transition::split :
@@ -151,7 +157,7 @@ void Application::open_document(const std::string& filename) {
       transition_started_ = animation_time();
     }
     gtk_gl_area_queue_render(GTK_GL_AREA(area_));
-    if (options_.demo) schedule_auto_advance(true);
+    if (options_.demo) schedule_auto_advance();
   } catch (const std::exception& error) {
     startup_error_ = error.what();
     g_application_quit(G_APPLICATION(application_));
@@ -160,35 +166,19 @@ void Application::open_document(const std::string& filename) {
 
 void Application::configure_program() {
   if (options_.program.empty() || !document_) return;
-  std::istringstream input(options_.program);
-  std::string duration;
-  std::string effect;
-  int page = 0;
-  int last_duration = 0;
-  bool last_cube = false;
-  Transition last_transition = Transition::switch_page;
-  while (page < document_->page_count() && std::getline(input, duration, ':')) {
-    if (duration.empty()) break;
-    last_duration = std::max(0, static_cast<int>(std::stod(duration) * 1000.0));
-    durations_[static_cast<std::size_t>(page)] = last_duration;
-    if (std::getline(input, effect, ':')) {
-      last_cube = effect == "c";
-      last_transition = last_cube ? Transition::cube_forward :
-          effect == "blinds" ? Transition::blinds :
-          effect == "split" ? Transition::split :
-          effect == "cover" ? Transition::cover :
-          effect == "uncover" ? Transition::uncover :
-          effect == "fly" ? Transition::fly :
-          effect == "push" ? Transition::push : Transition::switch_page;
-    }
-    cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
-    transitions_[(page + 1) % document_->page_count()] = last_transition;
-    ++page;
-  }
-  for (; page < document_->page_count(); ++page) {
-    durations_[static_cast<std::size_t>(page)] = last_duration;
-    cube_transitions_[static_cast<std::size_t>((page + 1) % document_->page_count())] = last_cube;
-    transitions_[(page + 1) % document_->page_count()] = last_transition;
+  for (int page = 0; page < document_->page_count(); ++page) {
+    const auto& step = options_.program_steps[std::min(
+        static_cast<std::size_t>(page), options_.program_steps.size() - 1)];
+    durations_[page] = step.duration_ms;
+    const auto& effect = step.effect;
+    transitions_[(page + 1) % document_->page_count()] =
+        effect == "c" ? Transition::cube_forward :
+        effect == "blinds" ? Transition::blinds :
+        effect == "split" ? Transition::split :
+        effect == "cover" ? Transition::cover :
+        effect == "uncover" ? Transition::uncover :
+        effect == "fly" ? Transition::fly :
+        effect == "push" ? Transition::push : Transition::switch_page;
   }
 }
 
@@ -218,7 +208,7 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
   auto* self = static_cast<Application*>(data);
   if (!self->document_) return TRUE;
   try {
-    gdk_gl_context_make_current(context);
+    (void)context;
     require_gl_context(area);
     if (self->reload_renderer_ && self->renderer_) {
       self->renderer_->release();
@@ -261,6 +251,7 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
       self->zoom_started_ = self->animation_time();
       self->zoom_preparing_ = false;
     }
+    if (self->busy() || self->renderer_->idle_preparation_pending()) self->ensure_tick();
     if (!self->options_.snapshot.empty() && !self->snapshot_written_) {
       self->renderer_->write_png(self->options_.snapshot, width, height);
       self->snapshot_written_ = true;
@@ -298,7 +289,7 @@ double Application::animation_progress() const {
 }
 
 gint64 Application::animation_time() const {
-  return frame_time_us_ != 0 ? frame_time_us_ : g_get_monotonic_time();
+  return tick_source_ != 0 && frame_time_us_ != 0 ? frame_time_us_ : g_get_monotonic_time();
 }
 
 FrameState Application::frame_state() const {
@@ -307,14 +298,13 @@ FrameState Application::frame_state() const {
   state.next_page = next_page_;
   state.transition = transition_;
   state.progress = animation_progress();
-  if (document_) state.vertical_panels =
-      document_->page_info(next_page_).alignment == POPPLER_PAGE_TRANSITION_VERTICAL;
-  if (document_) state.split_inward =
-      document_->page_info(next_page_).direction == POPPLER_PAGE_TRANSITION_INWARD;
-  if (document_) state.direction_degrees = document_->page_info(next_page_).angle;
-  if (document_) state.fly_scale = document_->page_info(next_page_).scale;
-  if (document_) state.fly_inward =
-      document_->page_info(next_page_).direction == POPPLER_PAGE_TRANSITION_INWARD;
+  if (document_) {
+    const auto& info = document_->page_info(next_page_);
+    state.vertical_panels = info.alignment == POPPLER_PAGE_TRANSITION_VERTICAL;
+    state.inward = info.direction == POPPLER_PAGE_TRANSITION_INWARD;
+    state.direction_degrees = info.angle;
+    state.fly_scale = info.scale;
+  }
   if (page_effect(transition_)) return state;
   double progress = zoom_animating_ ? std::clamp(
       (animation_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
@@ -352,11 +342,25 @@ gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock* clock, gpo
       (self->renderer_ && self->renderer_->idle_preparation_pending())) {
     gtk_gl_area_queue_render(GTK_GL_AREA(widget));
   }
+  if (!self->busy() && !(self->renderer_ && self->renderer_->idle_preparation_pending())) {
+    self->tick_source_ = 0;
+    self->frame_time_us_ = 0;
+    return G_SOURCE_REMOVE;
+  }
   return G_SOURCE_CONTINUE;
+}
+
+void Application::ensure_tick() {
+  if (tick_source_ == 0)
+    tick_source_ = gtk_widget_add_tick_callback(area_, tick_callback, this, nullptr);
 }
 
 void Application::start_page_change(int delta, bool cube, bool programmed) {
   if (!document_ || busy()) return;
+  if (auto_advance_source_ != 0) {
+    g_source_remove(auto_advance_source_);
+    auto_advance_source_ = 0;
+  }
   next_page_ = wrap_page(current_page_ + delta, document_->page_count());
   transition_ = cube ? (delta > 0 ? Transition::cube_forward : Transition::cube_backward)
                      : Transition::switch_page;
@@ -372,10 +376,12 @@ void Application::start_page_change(int delta, bool cube, bool programmed) {
   transition_preparing_ = transition_ != Transition::none &&
                           transition_ != Transition::switch_page;
   transition_started_ = animation_time();
+  ensure_tick();
   if (transition_ == Transition::switch_page) {
     current_page_ = next_page_;
     transition_ = Transition::none;
     zoom_region_ = ZoomRegion::none;
+    schedule_auto_advance();
   }
   gtk_gl_area_queue_render(GTK_GL_AREA(area_));
 }
@@ -391,6 +397,8 @@ void Application::toggle_zoom(ZoomRegion region) {
   zoom_started_ = animation_time();
   zoom_animating_ = true;
   zoom_preparing_ = true;
+  ensure_tick();
+  gtk_gl_area_queue_render(GTK_GL_AREA(area_));
 }
 
 void Application::reset_zoom() {
@@ -398,6 +406,8 @@ void Application::reset_zoom() {
   zoom_reversing_ = true;
   zoom_started_ = animation_time();
   zoom_animating_ = true;
+  ensure_tick();
+  gtk_gl_area_queue_render(GTK_GL_AREA(area_));
 }
 
 bool Application::busy() const {
@@ -407,9 +417,11 @@ bool Application::busy() const {
 void Application::jump_to_section(int section) {
   if (!document_ || busy()) return;
   for (int page = 0; page < document_->page_count(); ++page) {
-    if (cube_transitions_[static_cast<std::size_t>(page)] && --section == 0) {
+    if ((transitions_[page] == Transition::cube_forward) && --section == 0) {
       current_page_ = page;
       next_page_ = page;
+      zoom_region_ = ZoomRegion::none;
+      schedule_auto_advance();
       gtk_gl_area_queue_render(GTK_GL_AREA(area_));
       return;
     }
@@ -422,6 +434,8 @@ gboolean Application::key_callback(GtkEventControllerKey*, guint keyval, guint,
 }
 
 bool Application::handle_key(guint keyval, GdkModifierType state) {
+  keyval = gdk_keyval_to_lower(keyval);
+  if ((state & (GDK_ALT_MASK | GDK_SUPER_MASK | GDK_META_MASK)) != 0) return false;
   if ((state & GDK_CONTROL_MASK) != 0) {
     if (keyval == GDK_KEY_q) {
       g_application_quit(G_APPLICATION(application_));
@@ -448,10 +462,14 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
     } else if (!busy() && jump.number < document_->page_count()) {
       current_page_ = jump.number;
       next_page_ = jump.number;
+      zoom_region_ = ZoomRegion::none;
+      schedule_auto_advance();
       gtk_gl_area_queue_render(GTK_GL_AREA(area_));
     }
     return true;
   }
+
+  if ((state & GDK_CONTROL_MASK) != 0) return false;
 
   switch (keyval) {
     case GDK_KEY_Escape:
@@ -465,7 +483,7 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
     case GDK_KEY_space:
     case GDK_KEY_Page_Down: {
       const int destination = document_ ? wrap_page(current_page_ + 1, document_->page_count()) : 0;
-      const bool cube = document_ && cube_transitions_[static_cast<std::size_t>(destination)];
+      const bool cube = document_ && (transitions_[destination] == Transition::cube_forward);
       start_page_change(1, cube, true);
       return true;
     }
@@ -482,7 +500,7 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
     case GDK_KEY_t:
       if (busy()) return true;
       options_.demo = !options_.demo;
-      if (options_.demo) schedule_auto_advance(true);
+      if (options_.demo) schedule_auto_advance();
       else if (auto_advance_source_ != 0) {
         g_source_remove(auto_advance_source_);
         auto_advance_source_ = 0;
@@ -492,12 +510,12 @@ bool Application::handle_key(guint keyval, GdkModifierType state) {
   }
 }
 
-void Application::schedule_auto_advance(bool allow_immediate) {
+void Application::schedule_auto_advance() {
   if (!document_ || !options_.demo) return;
   if (auto_advance_source_ != 0) g_source_remove(auto_advance_source_);
   const int delay = durations_[static_cast<std::size_t>(current_page_)];
   if (delay <= 0) {
-    auto_advance_source_ = allow_immediate ? g_idle_add(auto_advance_callback, this) : 0;
+    auto_advance_source_ = 0;
     return;
   }
   auto_advance_source_ = g_timeout_add(delay, auto_advance_callback, this);
@@ -508,10 +526,7 @@ gboolean Application::auto_advance_callback(gpointer data) {
   self->auto_advance_source_ = 0;
   if (!self->document_) return G_SOURCE_REMOVE;
   const int destination = wrap_page(self->current_page_ + 1, self->document_->page_count());
-  self->start_page_change(1, self->cube_transitions_[static_cast<std::size_t>(destination)], true);
-  if (self->transition_ == Transition::none && self->options_.demo) {
-    self->schedule_auto_advance();
-  }
+  self->start_page_change(1, (self->transitions_[destination] == Transition::cube_forward), true);
   return G_SOURCE_REMOVE;
 }
 

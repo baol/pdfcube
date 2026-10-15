@@ -160,3 +160,28 @@ with tempfile.TemporaryDirectory() as directory:
     assert alternate_top != transition, "top color must affect the cube transition"
 
 
+
+# Cube endpoints must preserve the fitted dimensions of heterogeneous pages.
+from transition_fixture import make_pdf
+with tempfile.TemporaryDirectory() as directory:
+    root = pathlib.Path(directory)
+    sizes = ((640, 360), (360, 640))
+    deck, first_page, last_page = (root / name for name in ("mixed.pdf", "first.pdf", "last.pdf"))
+    make_pdf(deck, sizes=sizes, effect="Box")
+    make_pdf(first_page, sizes=sizes, pages=(0,), effect="Box")
+    make_pdf(last_page, sizes=sizes, pages=(1,), effect="Box")
+    for progress, page in (("0", first_page), ("1", last_page)):
+        reference = root / f"reference-{progress}.png"
+        actual = root / f"cube-{progress}.png"
+        snapshot(reference, document=page)
+        snapshot(actual, "--program", "1:c", "--snapshot-progress", progress, document=deck)
+        width, height, expected = png_pixels(reference)
+        _, _, observed = png_pixels(actual)
+        # Compare colored page bounds, ignoring the cube caps and antialiasing.
+        def bounds(rows):
+            points = [(x, y) for y, row in enumerate(rows) for x in range(width)
+                      if (lambda c: (c[2] > 100 and c[0] < 80) or
+                                     (c[0] > 130 and 30 < c[1] < 90))(pixel(row, x))]
+            assert points
+            return min(x for x, y in points), min(y for x, y in points), max(x for x, y in points), max(y for x, y in points)
+        assert all(abs(a - b) <= 2 for a, b in zip(bounds(expected), bounds(observed))), (progress, bounds(expected), bounds(observed))

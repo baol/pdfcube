@@ -7,6 +7,7 @@
 
 #include <condition_variable>
 #include <deque>
+#include <exception>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -30,10 +31,9 @@ struct FrameState {
   Transition transition{Transition::none};
   double progress{0.0};
   bool vertical_panels{false};
-  bool split_inward{true};
+  bool inward{true};
   int direction_degrees{0};
   float fly_scale{1};
-  bool fly_inward{true};
   float zoom{1.0F};
   float texture_zoom{1.0F};
   float offset_x{0.0F};
@@ -61,7 +61,9 @@ class Renderer {
   };
 
   struct PreparedPage {
-    Surface surface;
+    std::vector<unsigned char> pixels;
+    int width{0};
+    int height{0};
     int maximum_size{0};
     int requested_size{0};
   };
@@ -73,6 +75,7 @@ class Renderer {
 
   GLuint compile_shader(GLenum type, const char* source);
   GLuint upload_surface(int page, Surface surface);
+  GLuint upload_pixels(int page, int width, int height, const std::vector<unsigned char>& pixels);
   bool upload_prepared_page(int page, int maximum_size);
   GLuint texture_for_page(int page, int maximum_size);
   void schedule_page(int page, int maximum_size);
@@ -101,6 +104,7 @@ class Renderer {
   std::mutex document_render_mutex_;
   std::condition_variable prepared_condition_;
   std::thread render_thread_;
+  std::exception_ptr preparation_error_;
   bool stop_render_thread_{false};
   bool idle_preparation_pending_{false};
 };

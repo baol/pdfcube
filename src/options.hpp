@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace pdfcube {
 
@@ -12,12 +13,18 @@ struct Color {
   float alpha{1.0F};
 };
 
+struct ProgramStep {
+  int duration_ms;
+  std::string effect;
+};
+
 struct Options {
   Color background{0.6F, 0.0F, 0.0F, 1.0F};
   Color top{0.7F, 0.6F, 0.6F, 1.0F};
   bool demo{false};
   bool fullscreen{true};
   std::string program;
+  std::vector<ProgramStep> program_steps;
   std::string performance_log;
   std::string input_file;
   std::string snapshot;

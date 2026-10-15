@@ -2,6 +2,7 @@
 
 #include "math.hpp"
 #include <algorithm>
+#include <numbers>
 #include <cmath>
 
 namespace pdfcube {
@@ -17,7 +18,7 @@ inline float fly_start_scale(double value) {
 }
 
 inline FlyPose fly_pose(double progress, bool inward, int degrees, double start_scale) {
-  constexpr float pi = 3.14159265358979323846F;
+  constexpr float pi = std::numbers::pi_v<float>;
   const float p = static_cast<float>(std::clamp(progress, 0.0, 1.0));
   const float eased = p * p * (3 - 2 * p);
   const float radians = static_cast<float>(degrees) * pi / 180;
