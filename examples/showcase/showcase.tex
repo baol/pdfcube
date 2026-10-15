@@ -1,0 +1,189 @@
+% PDFCube transition showcase. Compile with pdfLaTeX (two passes).
+% Self-contained: all artwork is vector TikZ; no external images or fonts.
+% /Trans belongs to the DESTINATION page; "Next" names its transition.
+% No DocumentMetadata: use Hyperref's classic raw PDF transition syntax,
+% as Beamer itself does. /D is animation time, /Dur is dwell time.
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamertemplate{footline}{}
+\hypersetup{pdftitle={PDFCube transition showcase},pdfauthor={PDFCube},pdfpagemode=FullScreen}
+\definecolor{night}{HTML}{101C36}
+\definecolor{sea}{HTML}{063F49}
+\definecolor{plum}{HTML}{402442}
+\definecolor{cream}{HTML}{F4EBDD}
+\definecolor{coral}{HTML}{FF856B}
+\definecolor{mint}{HTML}{68E1C1}
+\definecolor{gold}{HTML}{FFCC66}
+\newcommand{\ShowcaseDwell}{5}
+% #1 PDF dictionary after /S; #2 title; #3 description; #4 next title;
+% #5 artwork seed; #6 background colour; #7 support status.
+\newcommand{\ShowSlide}[7]{%
+  \setbeamercolor{background canvas}{bg=#6}%
+  \begin{frame}[plain]
+    \hypersetup{pdfpagetransition={#1}}%
+    \transduration{\ShowcaseDwell}%
+    \begin{tikzpicture}[remember picture,overlay,x=1cm,y=1cm]
+      \begin{scope}[shift={(current page.south west)}]
+        \clip (0,0) rectangle (16,9);
+        \fill[white,opacity=.035] (7.5,0) rectangle (16,9);
+        % Fine full-height lines make motion and page boundaries easy to see.
+        \foreach \x in {8,9,...,16} \draw[white,opacity=.07] (\x,0)--(\x,9);
+        \pgfmathtruncatemacro{\kind}{mod(#5,5)}
+        \begin{scope}[shift={(11.8,4.65)},rotate={mod(#5*17,70)-35}]
+        \ifcase\kind
+          % Orbital system: concentric ellipses and an offset planet.
+          \foreach \r in {1.1,1.7,2.3,2.9}
+            \draw[cream,opacity=.5,line width=1pt] (0,0) ellipse ({\r} and {0.6*\r});
+          \fill[coral] (0,0) circle (1.03);
+          \fill[gold] (2.1,.95) circle (.42);
+          \fill[mint] (-2,-.8) circle (.24);
+          \draw[cream,line width=2pt] (-.5,-2.65)--(1.4,-2.65);
+        \or
+          % Faceted cube: three readable, contrasting faces.
+          \fill[mint] (0,2.4)--(2.5,1)--(0,-.4)--(-2.5,1)--cycle;
+          \fill[coral] (-2.5,1)--(0,-.4)--(0,-3)--(-2.5,-1.6)--cycle;
+          \fill[gold] (0,-.4)--(2.5,1)--(2.5,-1.6)--(0,-3)--cycle;
+          \draw[cream,line width=1pt] (0,2.4)--(2.5,1)--(2.5,-1.6)--(0,-3)--(-2.5,-1.6)--(-2.5,1)--cycle;
+          \foreach \x in {-3,-2,...,3} \fill[cream,opacity=.6] (\x,3.1) circle (.035);
+        \or
+          % Layered landscape: sun, distant ridges and foreground.
+          \fill[gold] (1.3,1.4) circle (1.1);
+          \fill[mint!60!#6] (-3,-1.7)--(-1.4,1.5)--(.2,-.6)--(1.1,.6)--(3,-1.7)--cycle;
+          \fill[mint] (-3,-2.4)--(-1,-.3)--(.4,-1.5)--(2,.3)--(3,-2.4)--cycle;
+          \fill[coral] (-3,-2.9)--(-1.5,-1.7)--(.4,-2.3)--(2,-1.6)--(3,-2.9)--cycle;
+          \foreach \y in {-3.2,-3.45,-3.7} \draw[cream,opacity=.4] (-3,\y)--(3,\y);
+        \or
+          % Parametric ribbon: phase varies on every appearance.
+          \foreach \i in {0,...,15} {
+            \pgfmathtruncatemacro{\mix}{\i*5}
+            \draw[color=mint!\mix!coral,line width=2pt]
+              plot[domain=-3:3,samples=60] (\x,{1.5*sin(55*\x+#5*11)+\i*.16-1.2});
+          }
+          \fill[gold] (2.2,2.4) circle (.35);
+        \or
+          % Radial burst: large asymmetric silhouette with fine spokes.
+          \foreach \a in {0,15,...,345} {
+            \draw[cream,opacity=.5,line width=1pt] (\a:1.2)--(\a:{2.5+.3*sin(\a*3+#5)});
+            \fill[mint] (\a:2.75) circle (.06);
+          }
+          \fill[coral] (0,0) circle (1.15);
+          \fill[gold] (.35,.3) circle (.42);
+          \draw[cream,line width=2pt] (-2.9,-2.7)--(-1.1,-2.7);
+        \fi
+        \end{scope}
+        \node[anchor=north west,text=cream,font=\small\bfseries] at (.8,8.35) {PDFCUBE / TRANSITION SHOWCASE};
+        \node[anchor=north west,text=cream,text width=6.2cm,align=left,
+              font=\fontsize{24}{28}\selectfont\bfseries] at (.8,7.25) {#2};
+        \node[anchor=north west,text=cream,text width=6cm,align=left,
+              font=\fontsize{14}{19}\selectfont] at (.8,4.05) {#3};
+        \node[anchor=south west,text=mint,text width=6.2cm,align=left,font=\footnotesize] at (.8,2.15) {#7};
+        \draw[cream,opacity=.35] (.8,1.6)--(15.2,1.6);
+        \node[anchor=north west,text=cream,font=\small,text width=13cm,align=left] at (.8,1.3) {\textbf{Next:} #4};
+        \node[anchor=south west,text=cream!65!#6,font=\scriptsize] at (.8,.35) {SPACE / PAGE DOWN TO ADVANCE};
+        \node[anchor=south east,text=cream,font=\small] at (15.2,.35) {\insertframenumber};
+      \end{scope}
+    \end{tikzpicture}
+  \end{frame}%
+}
+\begin{document}
+% Slide 1: transition entering this page.
+\ShowSlide{R}{PDFCube}{A Beamer tour of motion,\\colour and perspective.}{Box / inward}{0}{night}{Live showcase}
+% Slide 2: transition entering this page.
+\ShowSlide{Box /M /I /D 1.25}{Box / inward}{The classic cube rotation.\\Both PDF Box modes select the cube.}{Box / outward}{1}{sea}{Animated in PDFCube}
+% Slide 3: transition entering this page.
+\ShowSlide{Box /M /O /D 1.25}{Box / outward}{The classic cube rotation.\\Both PDF Box modes select the cube.}{Blinds / horizontal}{2}{plum}{Animated in PDFCube}
+% Slide 4: transition entering this page.
+\ShowSlide{Blinds /Dm /H /D 1.25}{Blinds / horizontal}{Twelve rotating slats\\reveal the incoming slide.}{Blinds / vertical}{3}{night}{Animated in PDFCube}
+% Slide 5: transition entering this page.
+\ShowSlide{Blinds /Dm /V /D 1.25}{Blinds / vertical}{Twelve rotating slats\\reveal the incoming slide.}{Split / horizontal / closing}{4}{sea}{Animated in PDFCube}
+% Slide 6: transition entering this page.
+\ShowSlide{Split /Dm /H /M /I /D 1.25}{Split / horizontal / closing}{Two doors turn around\\fixed outer hinges.}{Split / horizontal / opening}{5}{plum}{Animated in PDFCube}
+% Slide 7: transition entering this page.
+\ShowSlide{Split /Dm /H /M /O /D 1.25}{Split / horizontal / opening}{Two doors turn around\\fixed outer hinges.}{Split / vertical / closing}{6}{night}{Animated in PDFCube}
+% Slide 8: transition entering this page.
+\ShowSlide{Split /Dm /V /M /I /D 1.25}{Split / vertical / closing}{Two doors turn around\\fixed outer hinges.}{Split / vertical / opening}{7}{sea}{Animated in PDFCube}
+% Slide 9: transition entering this page.
+\ShowSlide{Split /Dm /V /M /O /D 1.25}{Split / vertical / opening}{Two doors turn around\\fixed outer hinges.}{Cover / right}{8}{plum}{Animated in PDFCube}
+% Slide 10: transition entering this page.
+\ShowSlide{Cover /Di 0 /D 1.25}{Cover / right}{The incoming sheet folds\\over the old slide.}{Cover / up}{9}{night}{Animated in PDFCube}
+% Slide 11: transition entering this page.
+\ShowSlide{Cover /Di 90 /D 1.25}{Cover / up}{The incoming sheet folds\\over the old slide.}{Cover / left}{10}{sea}{Animated in PDFCube}
+% Slide 12: transition entering this page.
+\ShowSlide{Cover /Di 180 /D 1.25}{Cover / left}{The incoming sheet folds\\over the old slide.}{Cover / down}{11}{plum}{Animated in PDFCube}
+% Slide 13: transition entering this page.
+\ShowSlide{Cover /Di 270 /D 1.25}{Cover / down}{The incoming sheet folds\\over the old slide.}{Uncover / right}{12}{night}{Animated in PDFCube}
+% Slide 14: transition entering this page.
+\ShowSlide{Uncover /Di 0 /D 1.25}{Uncover / right}{The outgoing sheet peels away\\to reveal the next slide.}{Uncover / up}{13}{sea}{Animated in PDFCube}
+% Slide 15: transition entering this page.
+\ShowSlide{Uncover /Di 90 /D 1.25}{Uncover / up}{The outgoing sheet peels away\\to reveal the next slide.}{Uncover / left}{14}{plum}{Animated in PDFCube}
+% Slide 16: transition entering this page.
+\ShowSlide{Uncover /Di 180 /D 1.25}{Uncover / left}{The outgoing sheet peels away\\to reveal the next slide.}{Uncover / down}{15}{night}{Animated in PDFCube}
+% Slide 17: transition entering this page.
+\ShowSlide{Uncover /Di 270 /D 1.25}{Uncover / down}{The outgoing sheet peels away\\to reveal the next slide.}{Fly / inward / right}{16}{sea}{Animated in PDFCube}
+% Slide 18: transition entering this page.
+\ShowSlide{Fly /M /I /Di 0 /SS 0.35 /B true /D 1.25}{Fly / inward / right}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / upper right}{17}{plum}{Animated in PDFCube}
+% Slide 19: transition entering this page.
+\ShowSlide{Fly /M /I /Di 45 /SS 0.35 /B true /D 1.25}{Fly / inward / upper right}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / up}{18}{night}{Animated in PDFCube}
+% Slide 20: transition entering this page.
+\ShowSlide{Fly /M /I /Di 90 /SS 0.35 /B true /D 1.25}{Fly / inward / up}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / upper left}{19}{sea}{Animated in PDFCube}
+% Slide 21: transition entering this page.
+\ShowSlide{Fly /M /I /Di 135 /SS 0.35 /B true /D 1.25}{Fly / inward / upper left}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / left}{20}{plum}{Animated in PDFCube}
+% Slide 22: transition entering this page.
+\ShowSlide{Fly /M /I /Di 180 /SS 0.35 /B true /D 1.25}{Fly / inward / left}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / lower left}{21}{night}{Animated in PDFCube}
+% Slide 23: transition entering this page.
+\ShowSlide{Fly /M /I /Di 225 /SS 0.35 /B true /D 1.25}{Fly / inward / lower left}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / down}{22}{sea}{Animated in PDFCube}
+% Slide 24: transition entering this page.
+\ShowSlide{Fly /M /I /Di 270 /SS 0.35 /B true /D 1.25}{Fly / inward / down}{A leaf-like drift follows\\a shallow arc through space.}{Fly / inward / lower right}{23}{plum}{Animated in PDFCube}
+% Slide 25: transition entering this page.
+\ShowSlide{Fly /M /I /Di 315 /SS 0.35 /B true /D 1.25}{Fly / inward / lower right}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / right}{24}{night}{Animated in PDFCube}
+% Slide 26: transition entering this page.
+\ShowSlide{Fly /M /O /Di 0 /SS 0.35 /B true /D 1.25}{Fly / outward / right}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / upper right}{25}{sea}{Animated in PDFCube}
+% Slide 27: transition entering this page.
+\ShowSlide{Fly /M /O /Di 45 /SS 0.35 /B true /D 1.25}{Fly / outward / upper right}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / up}{26}{plum}{Animated in PDFCube}
+% Slide 28: transition entering this page.
+\ShowSlide{Fly /M /O /Di 90 /SS 0.35 /B true /D 1.25}{Fly / outward / up}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / upper left}{27}{night}{Animated in PDFCube}
+% Slide 29: transition entering this page.
+\ShowSlide{Fly /M /O /Di 135 /SS 0.35 /B true /D 1.25}{Fly / outward / upper left}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / left}{28}{sea}{Animated in PDFCube}
+% Slide 30: transition entering this page.
+\ShowSlide{Fly /M /O /Di 180 /SS 0.35 /B true /D 1.25}{Fly / outward / left}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / lower left}{29}{plum}{Animated in PDFCube}
+% Slide 31: transition entering this page.
+\ShowSlide{Fly /M /O /Di 225 /SS 0.35 /B true /D 1.25}{Fly / outward / lower left}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / down}{30}{night}{Animated in PDFCube}
+% Slide 32: transition entering this page.
+\ShowSlide{Fly /M /O /Di 270 /SS 0.35 /B true /D 1.25}{Fly / outward / down}{A leaf-like drift follows\\a shallow arc through space.}{Fly / outward / lower right}{31}{sea}{Animated in PDFCube}
+% Slide 33: transition entering this page.
+\ShowSlide{Fly /M /O /Di 315 /SS 0.35 /B true /D 1.25}{Fly / outward / lower right}{A leaf-like drift follows\\a shallow arc through space.}{Push / right}{32}{plum}{Animated in PDFCube}
+% Slide 34: transition entering this page.
+\ShowSlide{Push /Di 0 /D 1.25}{Push / right}{A standard PDF transition\\ready for a future renderer.}{Push / up}{33}{night}{PDFCube currently replaces instantly}
+% Slide 35: transition entering this page.
+\ShowSlide{Push /Di 90 /D 1.25}{Push / up}{A standard PDF transition\\ready for a future renderer.}{Push / left}{34}{sea}{PDFCube currently replaces instantly}
+% Slide 36: transition entering this page.
+\ShowSlide{Push /Di 180 /D 1.25}{Push / left}{A standard PDF transition\\ready for a future renderer.}{Push / down}{35}{plum}{PDFCube currently replaces instantly}
+% Slide 37: transition entering this page.
+\ShowSlide{Push /Di 270 /D 1.25}{Push / down}{A standard PDF transition\\ready for a future renderer.}{Dissolve}{36}{night}{PDFCube currently replaces instantly}
+% Slide 38: transition entering this page.
+\ShowSlide{Dissolve /D 1.25}{Dissolve}{A standard PDF particle effect\\ready for a future renderer.}{Glitter / right}{37}{sea}{PDFCube currently replaces instantly}
+% Slide 39: transition entering this page.
+\ShowSlide{Glitter /Di 0 /D 1.25}{Glitter / right}{A standard PDF sparkle effect\\ready for a future renderer.}{Glitter / down}{38}{plum}{PDFCube currently replaces instantly}
+% Slide 40: transition entering this page.
+\ShowSlide{Glitter /Di 270 /D 1.25}{Glitter / down}{A standard PDF sparkle effect\\ready for a future renderer.}{Glitter / lower right}{39}{night}{PDFCube currently replaces instantly}
+% Slide 41: transition entering this page.
+\ShowSlide{Glitter /Di 315 /D 1.25}{Glitter / lower right}{A standard PDF sparkle effect\\ready for a future renderer.}{Wipe / right}{40}{sea}{PDFCube currently replaces instantly}
+% Slide 42: transition entering this page.
+\ShowSlide{Wipe /Di 0 /D 1.25}{Wipe / right}{A standard PDF directional reveal\\ready for a future renderer.}{Wipe / up}{41}{plum}{PDFCube currently replaces instantly}
+% Slide 43: transition entering this page.
+\ShowSlide{Wipe /Di 90 /D 1.25}{Wipe / up}{A standard PDF directional reveal\\ready for a future renderer.}{Wipe / left}{42}{night}{PDFCube currently replaces instantly}
+% Slide 44: transition entering this page.
+\ShowSlide{Wipe /Di 180 /D 1.25}{Wipe / left}{A standard PDF directional reveal\\ready for a future renderer.}{Wipe / down}{43}{sea}{PDFCube currently replaces instantly}
+% Slide 45: transition entering this page.
+\ShowSlide{Wipe /Di 270 /D 1.25}{Wipe / down}{A standard PDF directional reveal\\ready for a future renderer.}{Fade}{44}{plum}{PDFCube currently replaces instantly}
+% Slide 46: transition entering this page.
+\ShowSlide{Fade /D 1.25}{Fade}{A standard PDF crossfade\\ready for a future renderer.}{Replace}{45}{night}{PDFCube currently replaces instantly}
+% Slide 47: transition entering this page.
+\ShowSlide{R /D 1.25}{Replace}{An immediate page change.\\The reference for clean endpoints.}{Play it again}{46}{sea}{Instant in PDFCube}
+% Slide 48: transition entering this page.
+\ShowSlide{R}{Play it again}{Space advances. Left returns.\\Press Space to replay the next effect.}{Replace / restart the showcase}{47}{plum}{End of showcase}
+\end{document}

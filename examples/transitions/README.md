@@ -1,5 +1,8 @@
 # Transition examples
 
+For a presentation with vector artwork and next-effect labels, build the
+[LaTeX/Beamer showcase](../showcase/README.md).
+
 Ready-to-open diagnostic slides:
 
 - [Horizontal Blinds](blinds-horizontal.pdf)
