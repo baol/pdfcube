@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
 
 permissions:
   contents: write
@@ -13,13 +12,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      create_tag: ${{ steps.version.outputs.create_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Calculate release version
         id: version
         shell: bash
@@ -40,17 +42,14 @@ jobs:
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
           echo "create_tag=${create_tag}" >> "${GITHUB_OUTPUT}"
           echo "PDFCUBE_VERSION=${version}" >> "${GITHUB_ENV}"
-
       - name: Install build and packaging dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential meson ninja-build python3 xvfb xauth mesa-utils \
-            libgl1-mesa-dri \
-            libgtk-4-dev libepoxy-dev libpoppler-glib-dev libcairo2-dev \
-            libboost-program-options-dev appstream desktop-file-utils \
+            libgl1-mesa-dri libgtk-4-dev libepoxy-dev libpoppler-glib-dev \
+            libcairo2-dev libboost-program-options-dev appstream desktop-file-utils \
             debhelper lintian wget file texlive-latex-recommended texlive-pictures
-
       - name: Configure, build, and test
         run: |
           meson setup build --buildtype=release -Dwerror=true --prefix=/usr -Dinstall_docs=true
@@ -59,10 +58,8 @@ jobs:
           meson test -C build --print-errorlogs
           desktop-file-validate org.pdfcube.pdfcube.desktop
           appstreamcli validate --pedantic --no-net build/org.pdfcube.pdfcube.metainfo.xml
-
       - name: Build source archive
         run: meson dist -C build --formats gztar
-
       - name: Build Debian package
         run: |
           ubuntu_codename="$(. /etc/os-release; echo "${VERSION_CODENAME}")"
@@ -75,7 +72,6 @@ jobs:
             test -s "build/deb-doc-check/usr/share/doc/pdfcube/examples/${name}"
           done
           lintian --profile ubuntu ../pdfcube_*.changes
-
       - name: Build AppImage
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -86,33 +82,25 @@ jobs:
           test -s AppDir/usr/share/doc/pdfcube/examples/showcase.pdf
           test -s AppDir/usr/share/doc/pdfcube/examples/showcase.tex
           test -s AppDir/usr/share/doc/pdfcube/examples/README.md
-          wget --https-only \
-            https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
-          wget --https-only \
-            https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/7a3fbc31a9e5075073ff8790f26effbac5f84453/linuxdeploy-plugin-gtk.sh
-          wget --https-only \
-            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
-          wget --https-only \
-            https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          wget --https-only https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
+          wget --https-only https://raw.githubusercontent.com/linuxdeploy/linuxdeploy-plugin-gtk/7a3fbc31a9e5075073ff8790f26effbac5f84453/linuxdeploy-plugin-gtk.sh
+          wget --https-only https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          wget --https-only https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
           echo 'c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d  linuxdeploy-x86_64.AppImage' | sha256sum -c -
           echo 'b0f4cbc684a0103a9651f0955b635eaea0096b3a66c0f5a2c2aa337960375171  linuxdeploy-plugin-gtk.sh' | sha256sum -c -
           echo 'ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool-x86_64.AppImage' | sha256sum -c -
           echo '2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  runtime-x86_64' | sha256sum -c -
-          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh \
-            appimagetool-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-gtk.sh appimagetool-x86_64.AppImage
           export PATH="${PWD}:${PATH}"
-          ./linuxdeploy-x86_64.AppImage \
-            --appdir AppDir \
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir \
             --desktop-file org.pdfcube.pdfcube.desktop \
-            --icon-file data/org.pdfcube.pdfcube.svg \
-            --plugin gtk
+            --icon-file data/org.pdfcube.pdfcube.svg --plugin gtk
           ./appimagetool-x86_64.AppImage --no-appstream --runtime-file runtime-x86_64 \
             AppDir "pdfcube-${VERSION}-x86_64.AppImage"
           xvfb-run -a ./pdfcube-${VERSION}-x86_64.AppImage \
             --no-fullscreen --snapshot /tmp/pdfcube-appimage.png tests/fixture.pdf
           test -s /tmp/pdfcube-appimage.png
-
-      - name: Collect release assets
+      - name: Collect Linux release assets
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -121,29 +109,124 @@ jobs:
           cp ../pdfcube_*_amd64.deb release-assets/
           cp "pdfcube-${VERSION}-x86_64.AppImage" release-assets/
           cp build/examples/showcase/showcase.pdf "release-assets/pdfcube-${VERSION}-showcase.pdf"
-          cd release-assets
-          sha256sum * > SHA256SUMS
-
-      - name: Upload workflow artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: pdfcube-${{ steps.version.outputs.version }}
+          name: linux-release-assets
           path: release-assets/
           if-no-files-found: error
 
-      - name: Create release tag
-        if: steps.version.outputs.create_tag == 'true'
+  macos:
+    needs: prepare
+    runs-on: macos-15
+    env:
+      PDFCUBE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install dependencies
+        run: brew install meson ninja pkg-config gtk4 libepoxy poppler boost dylibbundler librsvg
+      - name: Build and test
+        run: |
+          meson setup build --buildtype=release -Dwerror=true
+          meson compile -C build
+          meson test -C build "command-line compatibility" --print-errorlogs
+      - name: Build and verify DMG
+        run: |
+          packaging/macos/build-dmg.sh build/src/pdfcube "${PDFCUBE_VERSION}" \
+            "pdfcube-${PDFCUBE_VERSION}-macos.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-assets
+          path: pdfcube-${{ needs.prepare.outputs.version }}-macos.dmg
+          if-no-files-found: error
+
+  windows:
+    needs: prepare
+    runs-on: windows-2025
+    env:
+      PDFCUBE_VERSION: ${{ needs.prepare.outputs.version }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-meson
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libepoxy
+            mingw-w64-ucrt-x86_64-poppler
+            mingw-w64-ucrt-x86_64-boost
+            mingw-w64-ucrt-x86_64-imagemagick
+            mingw-w64-ucrt-x86_64-librsvg
+            mingw-w64-ucrt-x86_64-msitools
+      - name: Build and test
+        run: |
+          meson setup build --buildtype=release -Dwerror=true
+          meson compile -C build
+          meson test -C build "command-line compatibility" --print-errorlogs
+      - name: Build and verify MSI
+        run: |
+          packaging/windows/build-msi.sh build/src/pdfcube.exe "${PDFCUBE_VERSION}" \
+            "pdfcube-${PDFCUBE_VERSION}-x86_64.msi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-assets
+          path: pdfcube-${{ needs.prepare.outputs.version }}-x86_64.msi
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare, macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release-assets'
+          path: release-assets
+          merge-multiple: true
+      - name: Verify release assets and checksums
         env:
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          test -s "release-assets/pdfcube-${VERSION}.tar.gz"
+          test -n "$(find release-assets -maxdepth 1 -name 'pdfcube_*_amd64.deb' -print -quit)"
+          test -s "release-assets/pdfcube-${VERSION}-x86_64.AppImage"
+          test -s "release-assets/pdfcube-${VERSION}-macos.dmg"
+          test -s "release-assets/pdfcube-${VERSION}-x86_64.msi"
+          test -s "release-assets/pdfcube-${VERSION}-showcase.pdf"
+          cd release-assets
+          sha256sum * > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdfcube-${{ needs.prepare.outputs.version }}
+          path: release-assets/
+          if-no-files-found: error
+      - name: Create release tag
+        if: needs.prepare.outputs.create_tag == 'true'
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git tag -a "${RELEASE_TAG}" -m "PDFCube ${PDFCUBE_VERSION}"
+          git tag -a "${RELEASE_TAG}" -m "PDFCube ${VERSION}"
           git push origin "${RELEASE_TAG}"
-
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
           generate_release_notes: true
           files: release-assets/*
