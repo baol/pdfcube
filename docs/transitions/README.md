@@ -170,12 +170,11 @@ shallow side faces as well as the classic cube caps.
 ## Dissolve: experimental, awaiting visual approval
 
 Dissolve treats the outgoing page as a thin glass panel. A deterministic mesh
-of 240 irregular triangular shards reacts to two off-centre impacts. During the
-first tenth of the transition the triangles separate by only a hairline, making
-the crack network appear while the page remains readable. The shards then
-detach in overlapping waves, tumble in three dimensions, drift away from their
-nearest impact, move toward the viewer and fall under restrained gravity,
-revealing the destination beneath them.
+of 240 irregular triangular shards reacts to a single central impact from
+behind. A fast fracture wave launches the shards radially outward and toward
+the viewer. Motion starts with a sharp impulse and slows under drag while the
+pieces tumble and fall under restrained gravity, revealing the destination
+beneath them.
 
 The fracture and motion are closed-form functions of progress: there is no
 runtime randomness or accumulating physics state. All shard vertices are sent

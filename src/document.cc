@@ -85,7 +85,9 @@ Surface Document::render_page(int page_number, int maximum_size) const {
   cairo_t* context = cairo_create(surface.get());
   cairo_set_source_rgb(context, 1.0, 1.0, 1.0);
   cairo_paint(context);
-  cairo_scale(context, scale, scale);
+  // Fill the integer texture extent: uniform scaling leaves a fractional,
+  // white-backed row or column when the PDF dimensions round upward.
+  cairo_scale(context, width / info.width, height / info.height);
   poppler_page_render(page, context);
   cairo_destroy(context);
   g_object_unref(page);
