@@ -102,8 +102,14 @@ def pixel(row, column):
 with tempfile.TemporaryDirectory() as directory:
     root = pathlib.Path(directory)
     first = snapshot(root / "first.png", skip_if_no_gl=True)
-    repeated = snapshot(root / "repeated.png")
+    performance_log = root / "timings.csv"
+    repeated = snapshot(
+        root / "repeated.png", "--performance-log", performance_log
+    )
     assert first == repeated, "software-rendered snapshots must be deterministic"
+    assert performance_log.read_text() == (
+        "frame_time_us,frame_interval_us,cpu_submit_us,transition,progress,preparing\n"
+    )
     width, height, rows = png_pixels(root / "first.png")
     assert all(
         pixel(rows[y], x)[:3] == (255, 255, 255)

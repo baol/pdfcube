@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -42,6 +43,7 @@ int Application::run() {
   char name[] = "pdfcube";
   char* arguments[] = {name, nullptr};
   const int status = g_application_run(G_APPLICATION(application_), 1, arguments);
+  write_performance_log();
   if (auto_advance_source_ != 0) g_source_remove(auto_advance_source_);
   g_object_unref(application_);
   if (!startup_error_.empty()) {
@@ -139,7 +141,7 @@ void Application::open_document(const std::string& filename) {
       transition_ = transitions_[1];
       if (transition_ == Transition::switch_page && options_.snapshot_progress <= 0)
         transition_ = Transition::none;
-      transition_started_ = g_get_monotonic_time();
+      transition_started_ = animation_time();
     }
     gtk_gl_area_queue_render(GTK_GL_AREA(area_));
     if (options_.demo) schedule_auto_advance(true);
@@ -223,15 +225,32 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
     const int scale = gtk_widget_get_scale_factor(GTK_WIDGET(area));
     const int width = gtk_widget_get_width(GTK_WIDGET(area)) * scale;
     const int height = gtk_widget_get_height(GTK_WIDGET(area)) * scale;
+    if (GdkFrameClock* clock = gtk_widget_get_frame_clock(GTK_WIDGET(area))) {
+      self->frame_time_us_ = gdk_frame_clock_get_frame_time(clock);
+    }
     const FrameState state = self->frame_state();
+    const bool timing = self->options_.snapshot.empty() &&
+                        (self->transition_ != Transition::none || self->zoom_animating_);
+    const gint64 cpu_started = timing ? g_get_monotonic_time() : 0;
     self->renderer_->render(width, height, state);
+    if (timing) {
+      const gint64 interval = self->previous_animation_frame_us_ == 0
+          ? 0 : self->frame_time_us_ - self->previous_animation_frame_us_;
+      self->frame_timings_.push_back({
+          self->frame_time_us_, interval, g_get_monotonic_time() - cpu_started,
+          static_cast<int>(self->transition_), state.progress,
+          self->transition_preparing_ || self->zoom_preparing_});
+      self->previous_animation_frame_us_ = self->frame_time_us_;
+    } else {
+      self->previous_animation_frame_us_ = 0;
+    }
     if (self->transition_preparing_) {
-      self->transition_started_ = g_get_monotonic_time();
+      self->transition_started_ = self->animation_time();
       self->transition_preparing_ = false;
     }
     if (self->zoom_preparing_) {
       // Start the clock only after the full zoom-resolution texture is ready.
-      self->zoom_started_ = g_get_monotonic_time();
+      self->zoom_started_ = self->animation_time();
       self->zoom_preparing_ = false;
     }
     if (!self->options_.snapshot.empty() && !self->snapshot_written_) {
@@ -246,13 +265,32 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
   return TRUE;
 }
 
+void Application::write_performance_log() const {
+  if (options_.performance_log.empty()) return;
+  std::ofstream output(options_.performance_log);
+  if (!output) {
+    std::cerr << "Could not write performance log: " << options_.performance_log << '\n';
+    return;
+  }
+  output << "frame_time_us,frame_interval_us,cpu_submit_us,transition,progress,preparing\n";
+  for (const FrameTiming& frame : frame_timings_) {
+    output << frame.frame_time_us << ',' << frame.frame_interval_us << ','
+           << frame.cpu_submit_us << ',' << frame.transition << ','
+           << frame.progress << ',' << frame.preparing << '\n';
+  }
+}
+
 double Application::animation_progress() const {
   if (transition_ == Transition::none) return 1.0;
   if (!options_.snapshot.empty()) return options_.snapshot_progress;
   if (transition_preparing_) return 0.0;
-  return std::clamp((g_get_monotonic_time() - transition_started_) /
+  return std::clamp((animation_time() - transition_started_) /
                         static_cast<double>(transition_length_us_),
                     0.0, 1.0);
+}
+
+gint64 Application::animation_time() const {
+  return frame_time_us_ != 0 ? frame_time_us_ : g_get_monotonic_time();
 }
 
 FrameState Application::frame_state() const {
@@ -271,7 +309,7 @@ FrameState Application::frame_state() const {
       document_->page_info(next_page_).direction == POPPLER_PAGE_TRANSITION_INWARD;
   if (page_effect(transition_)) return state;
   double progress = zoom_animating_ ? std::clamp(
-      (g_get_monotonic_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
+      (animation_time() - zoom_started_) / static_cast<double>(zoom_duration_us),
       0.0, 1.0) : 1.0;
   if (zoom_reversing_) progress = 1.0 - progress;
   if (zoom_preparing_) progress = 0.0;
@@ -283,8 +321,9 @@ FrameState Application::frame_state() const {
   return state;
 }
 
-gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock*, gpointer data) {
+gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock* clock, gpointer data) {
   auto* self = static_cast<Application*>(data);
+  self->frame_time_us_ = gdk_frame_clock_get_frame_time(clock);
   bool settled_transition = false;
   if (self->transition_ != Transition::none && self->animation_progress() >= 1.0 &&
       self->options_.snapshot.empty()) {
@@ -295,13 +334,14 @@ gboolean Application::tick_callback(GtkWidget* widget, GdkFrameClock*, gpointer 
     if (self->options_.demo) self->schedule_auto_advance();
   }
   if (self->zoom_animating_ && !self->zoom_preparing_ &&
-      g_get_monotonic_time() - self->zoom_started_ >= zoom_duration_us) {
+      self->animation_time() - self->zoom_started_ >= zoom_duration_us) {
     if (self->zoom_reversing_) self->zoom_region_ = ZoomRegion::none;
     self->zoom_reversing_ = false;
     self->zoom_animating_ = false;
     settled_transition = true;
   }
-  if (settled_transition || self->transition_ != Transition::none || self->zoom_animating_) {
+  if (settled_transition || self->transition_ != Transition::none || self->zoom_animating_ ||
+      (self->renderer_ && self->renderer_->idle_preparation_pending())) {
     gtk_gl_area_queue_render(GTK_GL_AREA(widget));
   }
   return G_SOURCE_CONTINUE;
@@ -321,8 +361,9 @@ void Application::start_page_change(int delta, bool cube, bool programmed) {
       if (transition_length_us_ <= 0) transition_ = Transition::switch_page;
     }
   }
-  transition_preparing_ = page_effect(transition_);
-  transition_started_ = g_get_monotonic_time();
+  transition_preparing_ = transition_ != Transition::none &&
+                          transition_ != Transition::switch_page;
+  transition_started_ = animation_time();
   if (transition_ == Transition::switch_page) {
     current_page_ = next_page_;
     transition_ = Transition::none;
@@ -339,7 +380,7 @@ void Application::toggle_zoom(ZoomRegion region) {
   }
   zoom_region_ = region;
   zoom_reversing_ = false;
-  zoom_started_ = g_get_monotonic_time();
+  zoom_started_ = animation_time();
   zoom_animating_ = true;
   zoom_preparing_ = true;
 }
@@ -347,7 +388,7 @@ void Application::toggle_zoom(ZoomRegion region) {
 void Application::reset_zoom() {
   if (busy() || zoom_region_ == ZoomRegion::none) return;
   zoom_reversing_ = true;
-  zoom_started_ = g_get_monotonic_time();
+  zoom_started_ = animation_time();
   zoom_animating_ = true;
 }
 

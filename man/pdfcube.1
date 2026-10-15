@@ -72,6 +72,12 @@ For example,
 .B \-\-program 5:c:3:p
 uses five seconds followed by a cube, then three seconds followed by a plain
 transition.
+.TP
+.BI \-\-performance-log " file.csv"
+Buffer animation frame timestamps, frame intervals, CPU submission times,
+transition identifiers, progress and preparation state, then write them to the
+named CSV file on exit. No file I/O occurs during animation. At 60 Hz, smooth
+animation frames should produce intervals close to 16667 microseconds.
 .SH INTERACTIVE CONTROLS
 .TP
 .B Space, Page Down

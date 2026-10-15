@@ -270,33 +270,8 @@ void Renderer::release() {
   vbo_ = vao_ = program_ = 0;
 }
 
-GLuint Renderer::texture_for_page(int page, int maximum_size) {
+GLuint Renderer::upload_surface(int page, Surface surface) {
   PageTexture& texture = textures_.at(static_cast<std::size_t>(page));
-  maximum_size = std::clamp(maximum_size, 1, maximum_texture_size_);
-  if (texture.name != 0 && texture.maximum_size >= maximum_size) return texture.name;
-
-  Surface surface;
-  {
-    std::lock_guard lock(prepared_mutex_);
-    PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
-    if (prepared.surface && prepared.maximum_size >= maximum_size) {
-      surface = std::move(prepared.surface);
-      prepared.maximum_size = 0;
-      prepared.requested_size = 0;
-    }
-  }
-  if (!surface) {
-    std::lock_guard document_lock(document_render_mutex_);
-    surface = document_.render_page(page, maximum_size);
-    std::lock_guard prepared_lock(prepared_mutex_);
-    PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
-    prepared.surface.reset();
-    prepared.maximum_size = 0;
-    prepared.requested_size = 0;
-    std::erase_if(render_requests_, [page](const RenderRequest& request) {
-      return request.page == page;
-    });
-  }
   const int width = cairo_image_surface_get_width(surface.get());
   const int height = cairo_image_surface_get_height(surface.get());
   const std::vector<unsigned char> pixels = surface_pixels_rgba(surface.get());
@@ -311,6 +286,51 @@ GLuint Renderer::texture_for_page(int page, int maximum_size) {
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, pixels.data());
   texture.maximum_size = std::max(width, height);
+  return texture.name;
+}
+
+bool Renderer::upload_prepared_page(int page, int maximum_size) {
+  PageTexture& texture = textures_.at(static_cast<std::size_t>(page));
+  maximum_size = std::clamp(maximum_size, 1, maximum_texture_size_);
+  if (texture.name != 0 && texture.maximum_size >= maximum_size) return true;
+
+  Surface surface;
+  {
+    std::lock_guard lock(prepared_mutex_);
+    PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
+    if (prepared.surface && prepared.maximum_size >= maximum_size) {
+      surface = std::move(prepared.surface);
+      prepared.maximum_size = 0;
+      prepared.requested_size = 0;
+    }
+  }
+  if (!surface) return false;
+  upload_surface(page, std::move(surface));
+  return true;
+}
+
+GLuint Renderer::texture_for_page(int page, int maximum_size) {
+  PageTexture& texture = textures_.at(static_cast<std::size_t>(page));
+  maximum_size = std::clamp(maximum_size, 1, maximum_texture_size_);
+  if (texture.name != 0 && texture.maximum_size >= maximum_size) return texture.name;
+  if (!upload_prepared_page(page, maximum_size)) {
+    Surface surface;
+    {
+      std::lock_guard document_lock(document_render_mutex_);
+      surface = document_.render_page(page, maximum_size);
+    }
+    {
+      std::lock_guard prepared_lock(prepared_mutex_);
+      PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
+      prepared.surface.reset();
+      prepared.maximum_size = 0;
+      prepared.requested_size = 0;
+      std::erase_if(render_requests_, [page](const RenderRequest& request) {
+        return request.page == page;
+      });
+    }
+    return upload_surface(page, std::move(surface));
+  }
   return texture.name;
 }
 
@@ -360,7 +380,10 @@ void Renderer::render_pages_in_background() {
 }
 
 void Renderer::preload_neighbors(int page, int maximum_size) {
-  if (document_.page_count() < 2) return;
+  if (document_.page_count() < 2) {
+    idle_preparation_pending_ = false;
+    return;
+  }
   const int next = (page + 1) % document_.page_count();
   const int previous = (page + document_.page_count() - 1) % document_.page_count();
   for (int candidate = 0; candidate < document_.page_count(); ++candidate) {
@@ -381,7 +404,25 @@ void Renderer::preload_neighbors(int page, int maximum_size) {
   }
   schedule_page(next, maximum_size);
   schedule_page(previous, maximum_size);
+
+  // Upload at most one prepared neighbor per static frame. This keeps texture
+  // creation and the potentially large pixel copy outside active animation,
+  // without causing one long idle-frame stall on integrated GPUs.
+  bool uploaded = false;
+  for (const int candidate : {next, previous}) {
+    const PageTexture& texture = textures_.at(static_cast<std::size_t>(candidate));
+    if (texture.name != 0 && texture.maximum_size >= maximum_size) continue;
+    if (!uploaded && upload_prepared_page(candidate, maximum_size)) uploaded = true;
+  }
+  idle_preparation_pending_ = false;
+  for (const int candidate : {next, previous}) {
+    if (textures_.at(static_cast<std::size_t>(candidate)).maximum_size < maximum_size) {
+      idle_preparation_pending_ = true;
+    }
+  }
 }
+
+bool Renderer::idle_preparation_pending() const { return idle_preparation_pending_; }
 
 void Renderer::draw_page(int page, int maximum_size, const float* matrix) {
   glUniformMatrix4fv(matrix_uniform_, 1, GL_FALSE, matrix);

@@ -18,6 +18,7 @@ struct Options {
   bool demo{false};
   bool fullscreen{true};
   std::string program;
+  std::string performance_log;
   std::string input_file;
   std::string snapshot;
   double snapshot_progress{0.0};

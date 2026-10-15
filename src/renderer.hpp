@@ -50,6 +50,7 @@ class Renderer {
   void release();
   void render(int width, int height, const FrameState& frame);
   void write_png(const std::string& filename, int width, int height) const;
+  [[nodiscard]] bool idle_preparation_pending() const;
 
  private:
   struct PageTexture {
@@ -69,6 +70,8 @@ class Renderer {
   };
 
   GLuint compile_shader(GLenum type, const char* source);
+  GLuint upload_surface(int page, Surface surface);
+  bool upload_prepared_page(int page, int maximum_size);
   GLuint texture_for_page(int page, int maximum_size);
   void schedule_page(int page, int maximum_size);
   void render_pages_in_background();
@@ -97,6 +100,7 @@ class Renderer {
   std::condition_variable prepared_condition_;
   std::thread render_thread_;
   bool stop_render_thread_{false};
+  bool idle_preparation_pending_{false};
 };
 
 }  // namespace pdfcube

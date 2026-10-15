@@ -92,6 +92,8 @@ options remain available:
 - `--demo` enables automatic slide advancement.
 - `--program n:x:...` programs durations and cube (`c`) or plain (`p`)
   transitions.
+- `--performance-log timings.csv` buffers animation frame timings and writes
+  them on exit, without file I/O during motion.
 - `--no-fullscreen` starts in a window.
 
 When no PDF is supplied, PDFCube opens a GTK file chooser. Options can also
@@ -107,6 +109,23 @@ upper-right, lower-left, and lower-right regions; `z` focuses slightly below
 the page center. They retain the original framing and 750 ms camera motion.
 Any zoom key while zoomed in (or `g`) returns to the full page.
 See `man pdfcube` for the full list.
+
+### Frame pacing
+
+PDFCube follows GTK's compositor-synchronized frame clock rather than imposing
+a fixed frame rate. Full-resolution previous and next pages are rendered in the
+background and uploaded to the GPU while the current slide is idle. If a page
+is not ready when navigation is requested, the transition remains at its exact
+first frame until preparation finishes; PDF rendering and texture upload do not
+consume the active animation clock.
+
+Use `--performance-log timings.csv` with a representative presentation. The CSV
+records displayed-frame intervals, CPU submission time, and whether a frame was
+the stationary preparation frame. At 60 Hz, animation-frame intervals
+should remain close to 16,667 microseconds; at 120 Hz, close to 8,333. CPU
+submission does not include asynchronous GPU completion, but interval spikes
+expose visible compositor or rendering stalls. Slide texture resolution is never
+reduced to meet a frame budget.
 
 ## Tests
 

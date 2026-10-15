@@ -65,6 +65,8 @@ ParseResult parse_options(int argc, char** argv) {
        "Auto-advance using PDF or programmed durations.")
       ("program", po::value<std::string>(),
        "Transition program duration:type pairs (c, p, blinds, split, cover, uncover, fly), for example 5:c:3:p.")
+      ("performance-log", po::value<std::string>(),
+       "Write buffered animation frame timings to a CSV file on exit.")
       ("no-fullscreen,n", po::value<bool>()->implicit_value(true),
        "Do not start in full-screen mode.");
 
@@ -124,6 +126,9 @@ ParseResult parse_options(int argc, char** argv) {
     }
     if (const auto* selected = value("demo")) result.options.demo = selected->as<bool>();
     if (const auto* selected = value("program")) result.options.program = selected->as<std::string>();
+    if (const auto* selected = value("performance-log")) {
+      result.options.performance_log = selected->as<std::string>();
+    }
     if (const auto* selected = value("bgcolor")) {
       result.options.background = parse_color(selected->as<std::string>());
     }
