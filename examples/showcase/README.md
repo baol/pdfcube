@@ -13,11 +13,16 @@ are provided by `texlive-latex-recommended` and `texlive-pictures`.
 From the repository root:
 
 ```sh
-mkdir -p build/showcase
-pdflatex -interaction=nonstopmode -halt-on-error -output-directory=build/showcase examples/showcase/showcase.tex
-pdflatex -interaction=nonstopmode -halt-on-error -output-directory=build/showcase examples/showcase/showcase.tex
+meson setup build  # once, if not already configured
+meson compile -C build doc
 ./build/src/pdfcube build/showcase/showcase.pdf
 ```
+
+The explicit `doc` target runs pdfLaTeX twice and writes
+`build/showcase/showcase.pdf`. It is always defined and is excluded from the
+default application build. Invoking it without pdfLaTeX or the required TeX
+packages fails; documentation is never silently skipped. CI runs this same
+target and uploads the PDF as the `beamer-showcase` artifact.
 
 Use pdfLaTeX with the normal Beamer presentation mode. Do not enable
 `\DocumentMetadata`: this source uses Hyperref's classic PDF transition

@@ -69,6 +69,11 @@ meson test -C build --print-errorlogs
 sudo meson install -C build
 ```
 
+Build the Beamer showcase explicitly with `meson compile -C build doc`.
+This documentation target requires TeX Live with Beamer and PGF/TikZ;
+see the [showcase build instructions](examples/showcase/README.md).
+The default application build does not build documentation.
+
 For a local build without installation:
 
 ```sh
