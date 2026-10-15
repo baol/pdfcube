@@ -19,6 +19,7 @@ class Application {
   int run();
 
  private:
+  friend struct ApplicationTest;
   static void activate_callback(GtkApplication* application, gpointer data);
   static void file_open_callback(GObject* source, GAsyncResult* result, gpointer data);
   static void realize_callback(GtkGLArea* area, gpointer data);
@@ -35,9 +36,10 @@ class Application {
   void configure_program();
   void jump_to_section(int section);
   void start_page_change(int delta, bool cube, bool programmed = false);
+  void ensure_tick();
   void toggle_zoom(ZoomRegion region);
   void reset_zoom();
-  void schedule_auto_advance(bool allow_immediate = false);
+  void schedule_auto_advance();
   void write_performance_log() const;
   FrameState frame_state() const;
   bool handle_key(guint keyval, GdkModifierType state);
@@ -51,7 +53,6 @@ class Application {
   GtkWidget* area_{nullptr};
   std::unique_ptr<Document> document_;
   std::unique_ptr<Renderer> renderer_;
-  std::vector<bool> cube_transitions_;
   std::vector<Transition> transitions_;
   std::vector<int> durations_;
   int current_page_{0};
@@ -66,6 +67,7 @@ class Application {
   bool zoom_animating_{false};
   bool zoom_preparing_{false};
   gint64 zoom_started_{0};
+  guint tick_source_{0};
   guint auto_advance_source_{0};
   bool reload_renderer_{false};
   bool snapshot_written_{false};

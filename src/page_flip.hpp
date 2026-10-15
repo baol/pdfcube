@@ -2,6 +2,7 @@
 
 #include "math.hpp"
 #include <algorithm>
+#include <numbers>
 
 namespace pdfcube {
 
@@ -11,7 +12,7 @@ constexpr float flip_camera = 4;
 // PDF Cover/Uncover admit the four cardinal directions; malformed values
 // fall back to the PDF default (left to right), not arbitrary rotations.
 inline int flip_direction(int degrees) {
-  return degrees == 90 || degrees == 180 || degrees == 270 ? degrees : 0;
+  return cardinal_direction(degrees);
 }
 
 struct FlipStrip {
@@ -27,7 +28,7 @@ inline std::array<FlipStrip, flip_strips> page_flip(double progress, bool cover,
   const float hinge = cover ? -travel : travel;
   const float t = static_cast<float>(std::clamp(cover ? 1 - progress : progress, 0.0, 1.0));
   const float opened = t * t * (3 - 2 * t);
-  constexpr float pi = 3.14159265358979323846F;
+  constexpr float pi = std::numbers::pi_v<float>;
   constexpr float fraction = 1.0F / flip_strips;
   float distance = 0;
   float depth = 0;

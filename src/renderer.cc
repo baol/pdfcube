@@ -8,6 +8,7 @@
 #include "push.hpp"
 
 #include <algorithm>
+#include <numbers>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -18,7 +19,7 @@
 namespace pdfcube {
 namespace {
 
-constexpr float pi = 3.14159265358979323846F;
+constexpr float pi = std::numbers::pi_v<float>;
 constexpr int legacy_frames = 30;
 
 struct Viewport {
@@ -36,10 +37,10 @@ struct CubePose {
 
 Viewport content_viewport(int width, int height, double page_aspect) {
   int content_width = width;
-  int content_height = std::max(1, static_cast<int>(std::lround(width / page_aspect)));
+  int content_height = static_cast<int>(std::clamp(std::round(width / page_aspect), 1.0, static_cast<double>(height) + 1.0));
   if (content_height > height) {
     content_height = height;
-    content_width = std::max(1, static_cast<int>(std::lround(height * page_aspect)));
+    content_width = static_cast<int>(std::clamp(std::round(height * page_aspect), 1.0, static_cast<double>(width)));
   }
   content_width = std::min(content_width, width);
   content_height = std::min(content_height, height);
@@ -99,13 +100,7 @@ CubePose legacy_cube_pose(double progress, bool forward) {
   return {interpolate(angle) * pi / 180.0F, interpolate(camera_y), interpolate(camera_z)};
 }
 
-#ifdef __APPLE__
-#define PDFCUBE_DESKTOP_GLSL_VERSION "#version 150\n"
-#else
-#define PDFCUBE_DESKTOP_GLSL_VERSION "#version 130\n"
-#endif
-
-const char* desktop_vertex_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
+const char* vertex_shader_body = R"(
 in vec3 position;
 in vec2 texture_coordinate;
 uniform mat4 transform;
@@ -117,38 +112,7 @@ void main() {
 }
 )";
 
-const char* desktop_fragment_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
-in vec2 uv;
-uniform sampler2D page_texture;
-uniform vec4 solid_color;
-uniform bool textured;
-uniform float shade;
-out vec4 output_color;
-void main() {
-  output_color = textured ? texture(page_texture, uv) : solid_color;
-  output_color.rgb *= shade;
-}
-)";
-
-#undef PDFCUBE_DESKTOP_GLSL_VERSION
-
-const char* es_vertex_shader = R"(
-#version 300 es
-precision highp float;
-layout(location = 0) in vec3 position;
-layout(location = 1) in vec2 texture_coordinate;
-uniform mat4 transform;
-uniform vec4 uv_rect;
-out vec2 uv;
-void main() {
-  gl_Position = transform * vec4(position, 1.0);
-  uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
-}
-)";
-
-const char* es_fragment_shader = R"(
-#version 300 es
-precision highp float;
+const char* fragment_shader_body = R"(
 in vec2 uv;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
@@ -166,12 +130,12 @@ std::vector<unsigned char> surface_pixels_rgba(cairo_surface_t* surface) {
   const int height = cairo_image_surface_get_height(surface);
   const int stride = cairo_image_surface_get_stride(surface);
   const unsigned char* source = cairo_image_surface_get_data(surface);
-  std::vector<unsigned char> result(static_cast<std::size_t>(width * height * 4));
+  std::vector<unsigned char> result(static_cast<std::size_t>(width) * height * 4);
   for (int row = 0; row < height; ++row) {
     for (int column = 0; column < width; ++column) {
       std::uint32_t argb = 0;
-      std::memcpy(&argb, source + row * stride + column * 4, sizeof(argb));
-      const std::size_t offset = static_cast<std::size_t>((row * width + column) * 4);
+      std::memcpy(&argb, source + static_cast<std::size_t>(row) * stride + column * 4, sizeof(argb));
+      const std::size_t offset = (static_cast<std::size_t>(row) * width + column) * 4;
       result[offset] = static_cast<unsigned char>((argb >> 16U) & 0xffU);
       result[offset + 1] = static_cast<unsigned char>((argb >> 8U) & 0xffU);
       result[offset + 2] = static_cast<unsigned char>(argb & 0xffU);
@@ -217,11 +181,17 @@ GLuint Renderer::compile_shader(GLenum type, const char* source) {
 }
 
 void Renderer::initialize() {
-  const bool desktop = epoxy_is_desktop_gl();
+#ifdef __APPLE__
+  constexpr const char* desktop_version = "#version 150\n";
+#else
+  constexpr const char* desktop_version = "#version 130\n";
+#endif
+  const std::string prefix = epoxy_is_desktop_gl()
+      ? desktop_version : "#version 300 es\nprecision highp float;\n";
   const GLuint vertex =
-      compile_shader(GL_VERTEX_SHADER, desktop ? desktop_vertex_shader : es_vertex_shader);
+      compile_shader(GL_VERTEX_SHADER, (prefix + vertex_shader_body).c_str());
   const GLuint fragment =
-      compile_shader(GL_FRAGMENT_SHADER, desktop ? desktop_fragment_shader : es_fragment_shader);
+      compile_shader(GL_FRAGMENT_SHADER, (prefix + fragment_shader_body).c_str());
   program_ = glCreateProgram();
   glAttachShader(program_, vertex);
   glAttachShader(program_, fragment);
@@ -278,10 +248,14 @@ void Renderer::release() {
 }
 
 GLuint Renderer::upload_surface(int page, Surface surface) {
+  return upload_pixels(page, cairo_image_surface_get_width(surface.get()),
+                       cairo_image_surface_get_height(surface.get()),
+                       surface_pixels_rgba(surface.get()));
+}
+
+GLuint Renderer::upload_pixels(int page, int width, int height,
+                               const std::vector<unsigned char>& pixels) {
   PageTexture& texture = textures_.at(static_cast<std::size_t>(page));
-  const int width = cairo_image_surface_get_width(surface.get());
-  const int height = cairo_image_surface_get_height(surface.get());
-  const std::vector<unsigned char> pixels = surface_pixels_rgba(surface.get());
   if (texture.name != 0) glDeleteTextures(1, &texture.name);
   glGenTextures(1, &texture.name);
   glBindTexture(GL_TEXTURE_2D, texture.name);
@@ -301,18 +275,18 @@ bool Renderer::upload_prepared_page(int page, int maximum_size) {
   maximum_size = std::clamp(maximum_size, 1, maximum_texture_size_);
   if (texture.name != 0 && texture.maximum_size >= maximum_size) return true;
 
-  Surface surface;
+  PreparedPage ready;
   {
     std::lock_guard lock(prepared_mutex_);
+    if (preparation_error_) std::rethrow_exception(preparation_error_);
     PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
-    if (prepared.surface && prepared.maximum_size >= maximum_size) {
-      surface = std::move(prepared.surface);
-      prepared.maximum_size = 0;
-      prepared.requested_size = 0;
+    if (!prepared.pixels.empty() && prepared.maximum_size >= maximum_size) {
+      ready = std::move(prepared);
+      prepared = {};
     }
   }
-  if (!surface) return false;
-  upload_surface(page, std::move(surface));
+  if (ready.pixels.empty()) return false;
+  upload_pixels(page, ready.width, ready.height, ready.pixels);
   return true;
 }
 
@@ -328,8 +302,9 @@ GLuint Renderer::texture_for_page(int page, int maximum_size) {
     }
     {
       std::lock_guard prepared_lock(prepared_mutex_);
+      if (preparation_error_) std::rethrow_exception(preparation_error_);
       PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
-      prepared.surface.reset();
+      prepared.pixels.clear();
       prepared.maximum_size = 0;
       prepared.requested_size = 0;
       std::erase_if(render_requests_, [page](const RenderRequest& request) {
@@ -347,6 +322,7 @@ void Renderer::schedule_page(int page, int maximum_size) {
 
   {
     std::lock_guard lock(prepared_mutex_);
+    if (preparation_error_) std::rethrow_exception(preparation_error_);
     PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(page));
     if (prepared.maximum_size >= maximum_size || prepared.requested_size >= maximum_size) return;
     prepared.requested_size = maximum_size;
@@ -371,17 +347,29 @@ void Renderer::render_pages_in_background() {
       render_requests_.pop_front();
     }
 
-    Surface surface;
-    {
-      std::lock_guard document_lock(document_render_mutex_);
-      surface = document_.render_page(request.page, request.maximum_size);
-    }
-    std::lock_guard lock(prepared_mutex_);
-    PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(request.page));
-    if (prepared.requested_size == request.maximum_size) {
-      prepared.surface = std::move(surface);
-      prepared.maximum_size = request.maximum_size;
-      prepared.requested_size = 0;
+    try {
+      Surface surface;
+      {
+        std::lock_guard document_lock(document_render_mutex_);
+        surface = document_.render_page(request.page, request.maximum_size);
+      }
+      const int width = cairo_image_surface_get_width(surface.get());
+      const int height = cairo_image_surface_get_height(surface.get());
+      auto pixels = surface_pixels_rgba(surface.get());
+      surface.reset();
+      std::lock_guard lock(prepared_mutex_);
+      PreparedPage& prepared = prepared_pages_.at(static_cast<std::size_t>(request.page));
+      if (prepared.requested_size == request.maximum_size) {
+        prepared.pixels = std::move(pixels);
+        prepared.width = width;
+        prepared.height = height;
+        prepared.maximum_size = request.maximum_size;
+        prepared.requested_size = 0;
+      }
+    } catch (...) {
+      std::lock_guard lock(prepared_mutex_);
+      preparation_error_ = std::current_exception();
+      return;
     }
   }
 }
@@ -515,8 +503,8 @@ void Renderer::render(int width, int height, const FrameState& frame) {
     if (frame.transition != Transition::blinds) {
       const bool split = frame.transition == Transition::split;
       const bool fly = frame.transition == Transition::fly;
-      const bool cover = split ? frame.split_inward : frame.transition == Transition::cover;
-      const bool incoming = fly ? frame.fly_inward : cover;
+      const bool cover = split ? frame.inward : frame.transition == Transition::cover;
+      const bool incoming = fly ? frame.inward : cover;
       const int base = incoming ? frame.current_page : frame.next_page;
       const int sheet = incoming ? frame.next_page : frame.current_page;
       const auto fit_page = [&](int index) {
@@ -535,12 +523,12 @@ void Renderer::render(int width, int height, const FrameState& frame) {
       const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
                           translate(0, 0, -flip_camera);
       if (fly) {
-        const FlyPose pose = fly_pose(frame.progress, frame.fly_inward,
+        const FlyPose pose = fly_pose(frame.progress, frame.inward,
                                       frame.direction_degrees, frame.fly_scale);
         glUniform1f(shade_uniform_, pose.shade);
         draw_page(sheet, page_size(sheet), (view * pose.model).value.data());
       } else if (split) {
-        const float angle = split_angle(frame.progress, frame.split_inward);
+        const float angle = split_angle(frame.progress, frame.inward);
         for (int i = 0; i < 2; ++i) {
           const Matrix model = split_door(frame.vertical_panels, i, angle);
           if (frame.vertical_panels)
@@ -592,6 +580,19 @@ void Renderer::render(int width, int height, const FrameState& frame) {
     return;
   }
 
+  // A common full-window viewport lets each cube face retain its own aspect
+  // and its final fitted size. Equal-size decks retain their legacy geometry.
+  const auto& incoming_info = document_.page_info(frame.next_page);
+  const bool mixed_aspect = std::abs(page.width / page.height -
+      incoming_info.width / incoming_info.height) > 1e-6;
+  const auto face_fit = [&](int index) {
+    if (!mixed_aspect) return Matrix::identity();
+    const auto& info = document_.page_info(index);
+    const auto fit = content_viewport(width, height, info.width / info.height);
+    return scale(static_cast<float>(fit.width) / width,
+                 static_cast<float>(fit.height) / height, 1.0F);
+  };
+  if (mixed_aspect) glViewport(0, 0, width, height);
   const bool forward = frame.transition == Transition::cube_forward;
   const float direction = forward ? -1.0F : 1.0F;
   const CubePose pose = legacy_cube_pose(frame.progress, forward);
@@ -602,9 +603,10 @@ void Renderer::render(int width, int height, const FrameState& frame) {
                               0.0F, 0.0F);
   const Matrix cube = rotate_y(direction * pose.angle);
   const Matrix animated_view = projection * view * zoom * cube;
-  const Matrix current = animated_view * translate(0.0F, 0.0F, 1.0F);
+  const Matrix current = animated_view * translate(0.0F, 0.0F, 1.0F) *
+                         face_fit(frame.current_page);
   const Matrix incoming = animated_view * translate(forward ? 1.0F : -1.0F, 0.0F, 0.0F) *
-                          rotate_y(forward ? pi / 2.0F : -pi / 2.0F);
+                          rotate_y(forward ? pi / 2.0F : -pi / 2.0F) * face_fit(frame.next_page);
   draw_page(frame.current_page, texture_size, current.value.data());
   draw_page(frame.next_page, texture_size, incoming.value.data());
 
@@ -621,7 +623,7 @@ void Renderer::render(int width, int height, const FrameState& frame) {
 }
 
 void Renderer::write_png(const std::string& filename, int width, int height) const {
-  std::vector<unsigned char> pixels(static_cast<std::size_t>(width * height * 4));
+  std::vector<unsigned char> pixels(static_cast<std::size_t>(width) * height * 4);
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
   glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
   const int stride = cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width);

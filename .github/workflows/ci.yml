@@ -24,7 +24,7 @@ jobs:
             libboost-program-options-dev appstream desktop-file-utils \
             debhelper lintian
       - name: Configure
-        run: meson setup build -Db_sanitize=address,undefined
+        run: meson setup build -Dwerror=true -Db_sanitize=address,undefined
       - name: Build
         run: meson compile -C build
       - name: Test

@@ -36,3 +36,34 @@ with tempfile.TemporaryDirectory() as directory:
     assert outputs[0].read_bytes() != outputs[1].read_bytes(), (
         "concurrent snapshots did not render their independent documents"
     )
+
+# Normal interactive launches must also remain separate on the same session bus.
+import signal
+import time
+with tempfile.TemporaryDirectory() as directory:
+    processes = []
+    logs = []
+    try:
+        for index, pdf in enumerate((first_pdf, second_pdf)):
+            log = open(Path(directory) / f"launch-{index}.log", "w+")
+            logs.append(log)
+            processes.append(subprocess.Popen(
+                [xvfb, "-a", binary, "--no-fullscreen", pdf],
+                env=environment, stdout=log, stderr=log,
+                start_new_session=True,
+            ))
+            time.sleep(1)
+        time.sleep(1)
+        for process, log in zip(processes, logs):
+            if process.poll() is not None:
+                log.seek(0)
+                raise AssertionError(f"interactive launch exited {process.returncode}: {log.read()}")
+    finally:
+        for process in processes:
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            process.wait(timeout=10)
+        for log in logs:
+            log.close()

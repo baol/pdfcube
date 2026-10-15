@@ -3,6 +3,7 @@
 #include "math.hpp"
 
 #include <algorithm>
+#include <numbers>
 #include <cmath>
 
 namespace pdfcube {
@@ -20,11 +21,11 @@ struct PushPose {
 // PDF Push uses the four cardinal directions. Treat malformed values like the
 // PDF default (left to right), matching Cover and Uncover.
 inline int push_direction(int degrees) {
-  return degrees == 90 || degrees == 180 || degrees == 270 ? degrees : 0;
+  return cardinal_direction(degrees);
 }
 
 inline PushPose push_pose(double progress, int degrees) {
-  constexpr float pi = 3.14159265358979323846F;
+  constexpr float pi = std::numbers::pi_v<float>;
   const float p = static_cast<float>(std::clamp(progress, 0.0, 1.0));
   const float eased = p * p * (3 - 2 * p);
   const float radians = push_direction(degrees) * pi / 180;

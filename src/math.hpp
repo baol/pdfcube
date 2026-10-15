@@ -5,6 +5,10 @@
 
 namespace pdfcube {
 
+constexpr int cardinal_direction(int degrees) {
+  return degrees == 90 || degrees == 180 || degrees == 270 ? degrees : 0;
+}
+
 struct Matrix {
   std::array<float, 16> value{};
 

@@ -68,6 +68,16 @@ transition_metadata_test = executable(
   include_directories: include_directories('../src'),
 )
 if xvfb_run.found()
+  application_test = executable(
+    'application-test',
+    files('test_application.cc', '../src/application.cc', '../src/renderer.cc',
+          '../src/document.cc', '../src/options.cc'),
+    dependencies: [gtk, poppler, cairo, epoxy, boost],
+    include_directories: include_directories('..', '../src'),
+  )
+  test('application navigation and timers', xvfb_run,
+       args: ['-a', application_test.full_path(), files('fixture-wide.pdf')],
+       env: ['ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1'])
   render_test_environment = environment()
   render_test_environment.set('ASAN_OPTIONS', 'detect_leaks=0:halt_on_error=1:abort_on_error=1')
   foreach effect : ['Cover', 'Uncover']
@@ -134,6 +144,7 @@ if xvfb_run.found()
       'parallel snapshot isolation',
       dbus_run_session,
       args: [
+        '--config-file=' + meson.current_source_dir() / 'dbus-session.conf',
         python.full_path(),
         files('test_snapshot_isolation.py'),
         xvfb_run.full_path(),
@@ -142,7 +153,10 @@ if xvfb_run.found()
         files('fixture-wide.pdf'),
       ],
       timeout: 60,
-      env: render_test_environment,
+      # Keep desktop portal and accessibility daemons out of this private bus.
+      # The test needs application name ownership, not host desktop services.
+      env: ['ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1',
+            'GTK_A11Y=none', 'GSETTINGS_BACKEND=memory'],
     )
   endif
 endif

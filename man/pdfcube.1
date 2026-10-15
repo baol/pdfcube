@@ -53,6 +53,8 @@ Start in a window instead of fullscreen mode.
 Automatically advance slides using PDF page display durations or the program
 specified with
 .BR \-\-program .
+Slides with no positive duration wait for manual navigation.
+Manual navigation restarts the timer for the destination slide.
 .TP
 .BI \-\-program " n:x:n:x:..."
 Set slide durations and following transition types. Durations are in seconds;
@@ -76,6 +78,8 @@ direction, motion and starting scale.
 selects the soft-block Push effect with a 750 ms animation and the document's
 direction.
 The last pair is repeated for remaining slides.
+Pairs must be complete; durations must be finite, nonnegative and fit a signed
+32-bit millisecond timer. Unknown effects are rejected before opening a window.
 For example,
 .B \-\-program 5:c:3:p
 uses five seconds followed by a cube, then three seconds followed by a plain
