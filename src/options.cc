@@ -87,9 +87,21 @@ ParseResult parse_options(int argc, char** argv) {
   positional.add("input-file", 1);
 
   try {
+    // Boost's optional bool argument otherwise consumes a following PDF path
+    // as its value. Make the bare flag explicit while retaining =false and
+    // normal positional-argument handling after "--".
+    std::vector<std::string> arguments;
+    bool positional_only = false;
+    for (int i = 1; i < argc; ++i) {
+      const std::string argument = argv[i];
+      if (argument == "--") positional_only = true;
+      const bool boolean_switch = argument == "--experimental" || argument == "--demo" ||
+                                  argument == "--no-fullscreen";
+      arguments.push_back(!positional_only && boolean_switch ? argument + "=true" : argument);
+    }
     po::variables_map command_values;
     po::variables_map config_values;
-    po::store(po::command_line_parser(argc, argv)
+    po::store(po::command_line_parser(arguments)
                   .options(command_line)
                   .positional(positional)
                   .run(),
