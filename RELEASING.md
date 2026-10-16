@@ -50,14 +50,10 @@ Linux, macOS, and Windows packages build independently. The publish job waits
 for all three platforms, verifies every expected artifact, and only then creates
 the automatic tag and GitHub Release. Pull requests build and smoke-test the DMG
 and MSI as downloadable workflow artifacts, preventing release-only failures.
-The current automated packages are ad-hoc signed on macOS and unsigned on
-Windows; notarization and Authenticode signing require project-owned signing
-identities and should be added before presenting either package as trusted by
-the operating-system vendor.
 
 The release build explicitly enables `-Dinstall_docs=true` and invokes the
 Meson `doc` target before staging the AppImage. Debian's build rules enable
-that option and invoke `doc` independently, so packages do not depend on a PDF
-left over from another build. The standalone PDF is copied into `release-assets`
+that option and invoke `doc` independently, producing the PDF during each package
+build. The standalone PDF is copied into `release-assets`
 before checksums are generated. Missing documentation fails the package or
 release checks.
