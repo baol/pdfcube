@@ -103,7 +103,6 @@ inline const std::vector<GlassShard>& glass_shards() {
 
 inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex>& result) {
   const float position = std::clamp(static_cast<float>(progress), 0.0F, 1.0F);
-  const float crack = std::clamp(position / .10F, 0.0F, 1.0F);
   result.clear();
   const auto& shards = glass_shards();
   result.reserve(shards.size() * 3);
@@ -117,40 +116,32 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float raw = std::clamp((position - shard.delay) /
                                      std::max(.01F, 1 - shard.delay),
                                  0.0F, 1.0F);
-    // A continuous impulse curve builds outward speed through the flight,
-    // giving the pieces time to tumble before they clear the page.
-    const float motion = raw - (16.0F / 15.0F) * raw * raw +
-                         (16.0F / 15.0F) * raw * raw * raw;
     // The impact supplies a fixed angular momentum about an axis tangent to
     // the radial flight direction. Rotate rigidly about that axis throughout
-    // flight, independently of translational drag.
-    const float speed = std::sqrt(shard.tilt_x * shard.tilt_x +
-                                  shard.tilt_y * shard.tilt_y + shard.spin * shard.spin);
-    const float axis_x = shard.tilt_x / speed;
-    const float axis_y = shard.tilt_y / speed;
-    const float axis_z = shard.spin / speed;
-    const float angle = speed * raw;
+    // flight, independently of translation.
+    const float angular_speed = std::sqrt(shard.tilt_x * shard.tilt_x +
+                                          shard.tilt_y * shard.tilt_y + shard.spin * shard.spin);
+    const float axis_x = shard.tilt_x / angular_speed;
+    const float axis_y = shard.tilt_y / angular_speed;
+    const float axis_z = shard.spin / angular_speed;
+    const float angle = angular_speed * raw;
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
-    const float separation = .0045F * crack + .018F * motion;
-    // Choose the whole trajectory at launch. A bounding radius covers every
-    // orientation, so each piece crosses an edge by 95% without a late boost.
+    // Choose a constant radial speed at launch. The radius covers every shard
+    // orientation, and the target distance clears the viewport by 99%.
     float radius = 0;
     for (const auto& vertex : shard.vertices)
       radius = std::max(radius, std::hypot(vertex.x - center_x, vertex.y - center_y));
-    const float exit_x = std::abs(shard.direction_x) > .001F ?
-        (1 + radius - std::copysign(1.0F, shard.direction_x) * center_x) /
+    const float edge_distance = 1 + radius + .01F;
+    const float required_x = std::abs(shard.direction_x) > .001F ?
+        (edge_distance - std::copysign(1.0F, shard.direction_x) * center_x) /
             std::abs(shard.direction_x) : 1000;
-    // Allow the full downward gravitational displacement for upward shards;
-    // downward shards need no assistance from gravity to clear the edge.
-    const float exit_y = std::abs(shard.direction_y) > .001F ?
-        (1 + radius - std::copysign(1.0F, shard.direction_y) * center_y +
-         (shard.direction_y > 0 ? .65F : 0)) / std::abs(shard.direction_y) : 1000;
-    const float exit_age = (.95F - shard.delay) / (1 - shard.delay);
-    const float exit_motion = exit_age - (16.0F / 15.0F) * exit_age * exit_age +
-                              (16.0F / 15.0F) * exit_age * exit_age * exit_age;
-    const float travel = std::min(exit_x, exit_y) * motion / exit_motion;
-    const float fall = .65F * raw * raw;
+    const float required_y = std::abs(shard.direction_y) > .001F ?
+        (edge_distance - std::copysign(1.0F, shard.direction_y) * center_y) /
+            std::abs(shard.direction_y) : 1000;
+    const float travel_speed = std::max(0.0F, std::min(required_x, required_y)) /
+                               (.99F - shard.delay);
+    const float travel = travel_speed * std::max(0.0F, position - shard.delay);
     for (const ShardVertex& source : shard.vertices) {
       const float local_x = source.x - center_x;
       const float local_y = source.y - center_y;
@@ -162,9 +153,9 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
       const float turned_z = (axis_x * local_y - axis_y * local_x) * sine +
                              axis_z * dot * (1 - cosine);
       result.push_back({
-          center_x + turned_x + shard.direction_x * (separation + travel),
-          center_y + turned_y + shard.direction_y * (separation + travel) - fall,
-          .72F * motion + turned_z, source.u, source.v});
+          center_x + turned_x + shard.direction_x * travel,
+          center_y + turned_y + shard.direction_y * travel,
+          turned_z, source.u, source.v});
     }
   }
 }

@@ -464,8 +464,9 @@ void Renderer::draw_dissolve(int page, int maximum_size, double progress) {
   glBufferSubData(GL_ARRAY_BUFFER, 0,
                   static_cast<GLsizeiptr>(shard_vertices_.size() * sizeof(ShardVertex)),
                   shard_vertices_.data());
-  const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
-                      translate(0, 0, -flip_camera);
+  // Orthographic projection keeps radial flight at a constant screen speed;
+  // the rigid 3D rotation still foreshortens each tumbling shard.
+  const Matrix view = Matrix::identity();
   glUniformMatrix4fv(matrix_uniform_, 1, GL_FALSE, view.value.data());
   glUniform1i(textured_uniform_, GL_TRUE);
   glActiveTexture(GL_TEXTURE0);

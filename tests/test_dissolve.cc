@@ -46,11 +46,11 @@ int main() {
     assert(intact[index].v >= 0 && intact[index].v <= 1);
   }
   assert(cracked_distance > intact_distance);
-  assert(departed_distance > cracked_distance * 1.5);
-  assert(maximum_depth > .5F);
+  assert(departed_distance > cracked_distance);
+  assert(maximum_depth > .05F);
 
-  // A central impact must launch every shard outward promptly, with a
-  // stronger initial impulse than its later drift.
+  // A central impact must launch every shard outward promptly at constant
+  // screen speed, while rotation remains independent of translation.
   std::vector<pdfcube::ShardVertex> early, later, drift;
   pdfcube::update_glass_shard_vertices(.10, early);
   pdfcube::update_glass_shard_vertices(.20, later);
@@ -68,15 +68,10 @@ int main() {
       dy += drift[3 * i + j].y / 3;
     }
     assert(x * shards[i].direction_x + y * shards[i].direction_y > 0);
-    assert(std::hypot(ex - x, ey - y) > .02F);
+    assert(std::hypot(ex - x, ey - y) > .005F);
     assert(std::hypot(ex - x, ey - y) < .4F);
-    // Remove gravitational displacement before measuring translational drag.
-    const auto gravity = [&](float p) {
-      const float age = std::clamp((p - shards[i].delay) / (1 - shards[i].delay), 0.0F, 1.0F);
-      return .65F * age * age;
-    };
-    assert(std::hypot(lx - ex, ly - ey + gravity(.2F) - gravity(.1F)) >
-           std::hypot(dx - lx, dy - ly + gravity(.3F) - gravity(.2F)));
+    assert(std::abs((lx - ex) - (dx - lx)) < .00001F);
+    assert(std::abs((ly - ey) - (dy - ly)) < .00001F);
     // Tumbling preserves all three edge lengths (no shrinking or shearing).
     const auto length = [](const auto& a, const auto& b) {
       return std::sqrt((a.x - b.x) * (a.x - b.x) +
@@ -90,32 +85,50 @@ int main() {
                       length(drift[a], drift[b])) < .00001F);
     }
   }
+  // Check the entire flight, including the final approach to the edge, so a
+  // late acceleration cannot pass just by matching the first few samples.
+  std::vector<pdfcube::ShardVertex> previous = early;
+  for (int step = 11; step <= 99; ++step) {
+    std::vector<pdfcube::ShardVertex> current;
+    pdfcube::update_glass_shard_vertices(step / 100.0, current);
+    for (std::size_t i = 0; i < shards.size(); ++i) {
+      float vx = 0, vy = 0, reference_x = 0, reference_y = 0;
+      for (std::size_t j = 0; j < 3; ++j) {
+        const auto k = 3 * i + j;
+        vx += (current[k].x - previous[k].x) / 3;
+        vy += (current[k].y - previous[k].y) / 3;
+        reference_x += (later[k].x - early[k].x) / 30;
+        reference_y += (later[k].y - early[k].y) / 30;
+      }
+      assert(std::abs(vx - reference_x) < .00001F);
+      assert(std::abs(vy - reference_y) < .00001F);
+      assert(vx * shards[i].direction_x + vy * shards[i].direction_y > 0);
+    }
+    previous = std::move(current);
+  }
   // Interior projected vertices guarantee visible geometry during the tumble.
   for (double progress : {.5, .75}) {
     std::vector<pdfcube::ShardVertex> visible;
     pdfcube::update_glass_shard_vertices(progress, visible);
     int count = 0;
     for (const auto& vertex : visible) {
-      const float projection = 4 / (4 - vertex.z);
-      if (std::abs(vertex.x * projection) < .98F &&
-          std::abs(vertex.y * projection) < .98F) ++count;
+      if (std::abs(vertex.x) < .98F && std::abs(vertex.y) < .98F) ++count;
     }
     assert(count > 0);
   }
   // Every triangle must be completely outside the view before the final
   // static frame. A disjoint projected bounding box is a conservative test.
-  for (int step = 95; step <= 100; ++step) {
+  for (int step = 99; step <= 100; ++step) {
     std::vector<pdfcube::ShardVertex> exited;
     pdfcube::update_glass_shard_vertices(step / 100.0, exited);
     for (std::size_t i = 0; i < exited.size(); i += 3) {
       float min_x = 100, min_y = 100, max_x = -100, max_y = -100;
       for (std::size_t j = i; j < i + 3; ++j) {
         const auto& vertex = exited[j];
-        const float projection = 4 / (4 - vertex.z);
-        min_x = std::min(min_x, vertex.x * projection);
-        max_x = std::max(max_x, vertex.x * projection);
-        min_y = std::min(min_y, vertex.y * projection);
-        max_y = std::max(max_y, vertex.y * projection);
+        min_x = std::min(min_x, vertex.x);
+        max_x = std::max(max_x, vertex.x);
+        min_y = std::min(min_y, vertex.y);
+        max_y = std::max(max_y, vertex.y);
       }
       assert(max_x < -1 || min_x > 1 || max_y < -1 || min_y > 1);
     }
