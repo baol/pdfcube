@@ -41,7 +41,7 @@ The fast test suite additionally uses Python 3, Pillow, EGL development headers,
 and Mesa's software OpenGL driver. Install them with:
 
 ```sh
-sudo apt install python3 python3-pil libegl-dev libgl1-mesa-dri fonts-dejavu-core
+sudo apt install python3 python3-pil dbus-daemon libegl-dev libgl1-mesa-dri fonts-dejavu-core
 ```
 
 Frame tests render explicit progress values in one headless context per case;

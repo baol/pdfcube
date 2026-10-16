@@ -11,6 +11,8 @@
   context rather than starting a GUI/X server per frame.
 - Never verify pauses by sleeping or waiting for wall-clock time. Inject time
   and a scheduler, and assert the requested delays and rendered frame states.
+- Test snapshot isolation with separate processes and, on Linux, a private
+  session bus. A no-bus fallback can hide D-Bus bugs; use readiness messages.
 - Retain endpoint, aspect-ratio, metadata, determinism, and optional-rendering
   coverage when optimizing tests. Do not hide slow tests by merely increasing
   timeouts or dropping assertions.
