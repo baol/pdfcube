@@ -109,17 +109,21 @@ CubePose legacy_cube_pose(double progress, bool forward) {
 const char* desktop_vertex_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
 in vec3 position;
 in vec2 texture_coordinate;
+in float surface_light;
 uniform mat4 transform;
 uniform vec4 uv_rect;
 out vec2 uv;
+out float light;
 void main() {
   gl_Position = transform * vec4(position, 1.0);
   uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
+  light = surface_light;
 }
 )";
 
 const char* desktop_fragment_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
 in vec2 uv;
+in float light;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
 uniform bool textured;
@@ -127,7 +131,7 @@ uniform float shade;
 out vec4 output_color;
 void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
-  output_color.rgb *= shade;
+  output_color.rgb *= shade * light;
 }
 )";
 
@@ -138,12 +142,15 @@ const char* es_vertex_shader = R"(
 precision highp float;
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 texture_coordinate;
+layout(location = 2) in float surface_light;
 uniform mat4 transform;
 uniform vec4 uv_rect;
 out vec2 uv;
+out float light;
 void main() {
   gl_Position = transform * vec4(position, 1.0);
   uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
+  light = surface_light;
 }
 )";
 
@@ -151,6 +158,7 @@ const char* es_fragment_shader = R"(
 #version 300 es
 precision highp float;
 in vec2 uv;
+in float light;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
 uniform bool textured;
@@ -158,7 +166,7 @@ uniform float shade;
 out vec4 output_color;
 void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
-  output_color.rgb *= shade;
+  output_color.rgb *= shade * light;
 }
 )";
 
@@ -228,6 +236,7 @@ void Renderer::initialize() {
   glAttachShader(program_, fragment);
   glBindAttribLocation(program_, 0, "position");
   glBindAttribLocation(program_, 1, "texture_coordinate");
+  glBindAttribLocation(program_, 2, "surface_light");
   glLinkProgram(program_);
   glDeleteShader(vertex);
   glDeleteShader(fragment);
@@ -251,7 +260,9 @@ void Renderer::initialize() {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                         reinterpret_cast<void*>(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
-  shard_vertices_.reserve(glass_shards().size() * 3);
+  // Ordinary page geometry has no lighting array and keeps neutral lighting.
+  glVertexAttrib1f(2, 1);
+  shard_vertices_.reserve(glass_shard_vertex_count());
 
   glGenVertexArrays(1, &shard_vao_);
   glGenBuffers(1, &shard_vbo_);
@@ -265,6 +276,9 @@ void Renderer::initialize() {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(ShardVertex),
                         reinterpret_cast<void*>(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(ShardVertex),
+                        reinterpret_cast<void*>(5 * sizeof(float)));
+  glEnableVertexAttribArray(2);
 
   matrix_uniform_ = glGetUniformLocation(program_, "transform");
   uv_rect_uniform_ = glGetUniformLocation(program_, "uv_rect");
@@ -477,6 +491,9 @@ void Renderer::draw_dissolve(int page, int maximum_size, double progress) {
   glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(shard_vertices_.size()));
   glEnable(GL_CULL_FACE);
   glBindVertexArray(vao_);
+  // Array draws may leave the current generic attribute unspecified. Restore
+  // neutral lighting before any ordinary page or transition is drawn again.
+  glVertexAttrib1f(2, 1);
 }
 
 void Renderer::draw_color(const Color& color, const float* matrix) {
