@@ -27,7 +27,8 @@ EXAMPLES += [(f"wipe-{name}", "Wipe", "H", "I", angle)
 EXAMPLES += [("fade", "Fade", "H", "I", None)]
 
 def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),
-             effect="Blinds", motion="I", angle=None, start_scale=.35, rectangular=True):
+             effect="Blinds", motion="I", angle=None, start_scale=.35, rectangular=True,
+             colors=("0.12 0.32 0.65", "0.65 0.23 0.12"), ink="1 1 1"):
     objects = [b"<< /Type /Catalog /Pages 2 0 R >>", b""]
     objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
     kids = []
@@ -44,8 +45,8 @@ def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)
             f"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width} {height}] "
             f"/Resources << /Font << /F1 3 0 R >> >> /Contents {page_id + 1} 0 R "
             f"{transition if number == 1 else ''} >>").encode())
-        color = "0.12 0.32 0.65" if number == 0 else "0.65 0.23 0.12"
-        commands = [f"{color} rg 0 0 {width} {height} re f", "1 1 1 RG 0.5 w"]
+        color = colors[number]
+        commands = [f"{color} rg 0 0 {width} {height} re f", f"{ink} RG 0.5 w"]
         for i in range(1, 12):
             x, y = width * i / 12, height * i / 12
             commands += [f"{x} 0 m {x} {height} l S", f"0 {y} m {width} {y} l S"]
@@ -54,7 +55,7 @@ def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1)
             ("BOTTOM LEFT", 10, 12), ("BOTTOM RIGHT", width - 110, 12),
             ("OUTGOING" if number == 0 else "INCOMING", width / 2 - 50, height / 2),
         ):
-            commands.append(f"1 1 1 rg BT /F1 14 Tf {x} {y} Td ({label}) Tj ET")
+            commands.append(f"{ink} rg BT /F1 14 Tf {x} {y} Td ({label}) Tj ET")
         stream = "\n".join(commands).encode()
         objects.append(f"<< /Length {len(stream)} >>\nstream\n".encode() + stream + b"\nendstream")
     objects[1] = f"<< /Type /Pages /Kids [{' '.join(kids)}] /Count {len(kids)} >>".encode()

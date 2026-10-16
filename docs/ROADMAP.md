@@ -25,8 +25,7 @@ Fade reached the renderer before the README, showcase labels, manual, and CLI
 help were updated. The numeric-page formula in the manual used an internal
 zero-based index. Test dependencies also differed between README and INSTALL.
 The accompanying documentation edits align these descriptions; CLI help still
-needs Fade added to its effect list. The gallery generates Fade by default,
-but its `--effects` choices also need Fade added for focused captures.
+needs Fade added to its effect list.
 
 Create a small authoritative effect catalogue for names, program tokens, PDF
 mapping, and applicable parameters. Use it for CLI help and documentation checks.

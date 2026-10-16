@@ -145,11 +145,6 @@ the result back to sRGB. White artwork stays steady and the midpoint preserves
 brightness. The weight is smoothstep (`3t² − 2t³`), giving a gentle start and finish.
 Each composition includes its fitted page and surrounding background.
 
-![Fade checkpoints on light, dark, and colored slides](fade-review/contact-sheet.png)
-
-Animated examples: [light](fade-review/white.gif), [dark](fade-review/dark.gif),
-and [colored](fade-review/color.gif).
-
 ## Render and inspect
 
 From a configured checkout with the build/test dependencies, Pillow, Xvfb,
@@ -164,12 +159,12 @@ python3 tools/transition_gallery.py build/src/pdfcube build/transition-gallery
 Open `build/transition-gallery/index.html` for looping videos, five-frame contact
 sheets, individual frames, and input PDFs. The manifest records the source
 revision and binary version. `--effects Wipe` selects one effect; `--jobs N`
-controls concurrent captures. `--update-docs` writes contact sheets into this
-folder. The default 33 samples include exact quarter-progress frames.
+controls concurrent captures. `--effects Fade` includes colored, light, and dark
+slide pairs. The default 33 samples include exact quarter-progress frames.
+Generated media is written to the chosen output directory under `build/`.
 
 The **Transition review gallery** workflow produces the same downloadable bundle
-for a selected branch. `python3 tools/fade_review.py` regenerates the light, dark,
-and colored Fade examples using explicit progress in one headless context.
+for a selected branch.
 
 The [test contract](../../tests/README.md) describes endpoint, aspect-ratio,
 metadata, determinism, timing, and process-isolation coverage. The
