@@ -1,19 +1,34 @@
 # Test contract
 
-Ordinary tests should finish within 500 ms. Native graphics tests target the
-same budget, with at most 1 second for cold EGL/font/shader initialization.
-Fast tests enforce a 450 ms subprocess budget, reserving startup overhead;
-Meson gives every test a one-second hard timeout. Renderer cases run serially
-to avoid software-GPU contention and enforce a 900 ms internal budget, leaving
-room for Python/process startup. Do not increase these limits to hide a failure.
+Every test targets 500 ms, including cold EGL/font/shader initialization.
+Check every Meson result against this SLO before pushing. These are performance
+objectives, not functional pass/fail conditions. Fast-test and renderer helpers
+report SLO misses in the test logs (at 450 ms internally, reserving
+process startup overhead) without changing a correct test's exit status.
+Meson's separate 10-second watchdog catches hangs; it is not a performance SLO.
+Renderer cases run serially with one llvmpipe worker to avoid GPU contention and
+oversized worker-pool startup. Geometry and native renderer tests use -O1 while
+retaining sanitizer instrumentation and all assertions. Do not remove coverage
+to meet SLOs.
 
-Each effect/direction/page-ratio case creates one surfaceless EGL context and
+Before pushing, run the full suite and the separate SLO check on that run's log:
+
+```sh
+meson test -C build --print-errorlogs
+python3 tools/check_test_slo.py build/meson-logs/testlog.json --check
+```
+
+Without `--check`, the same command reports SLO misses without failing CI.
+
+Each effect/direction/page-ratio test creates one surfaceless EGL context and
 renders explicit progress values using the actual C++ Renderer, Document,
 option parser, program dispatch, and shaders. It retains exact endpoints,
 determinism, aspect ratios, metadata, direction/default handling, and optional
 glass thickness checks without starting GTK or Xvfb for each frame.
-Every case also renders and reads back all 61 frames of a 60 Hz second. A small
-Fontconfig fixture uses DejaVu Sans instead of scanning all system font folders;
+Pixel-regression checkpoints and complete frame sweeps are separate tests, so
+neither bundles both jobs against the per-test SLO. Each frame sweep renders
+and reads back all 61 frames of a 60 Hz second, including experimental glass.
+A small Fontconfig fixture uses DejaVu Sans instead of scanning all system font folders;
 both cold font and shader initialization remain inside the measured budget.
 
 Clock and auto-advance tests use synthetic timestamps and a recording

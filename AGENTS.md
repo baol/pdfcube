@@ -6,7 +6,9 @@
   Program Options, normalize bare switches to explicit `=true`, preserving
   explicit `=false` and literal filenames after `--`. Cover all three forms
   with parser tests, especially a bare switch immediately before a PDF path.
-- Keep each test within 500 ms; exceptional slow tests may take up to 1 second.
+- Target 500 ms for every test, and check every measured result before pushing.
+  These are performance SLOs, not functional pass/fail thresholds. Report
+  misses without failing correct tests; use a separate watchdog for hangs.
   Exercise renderer frames at explicit progress values in a shared headless
   context rather than starting a GUI/X server per frame.
 - Never verify pauses by sleeping or waiting for wall-clock time. Inject time

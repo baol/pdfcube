@@ -9,6 +9,7 @@ from render_client import Frames
 
 driver, metadata_test = map(lambda p: str(Path(p).resolve()), sys.argv[1:3])
 effect, motion, selected_axis, selected_angle, selected_ratio = sys.argv[3:8]
+mode = sys.argv[8]
 selected_angle = None if selected_angle == 'none' else int(selected_angle)
 selected_ratio = int(selected_ratio)
 flip = effect in ("Cover", "Uncover")
@@ -45,6 +46,15 @@ with tempfile.TemporaryDirectory() as directory:
         for sizes in [dimensions[selected_ratio]]:
             deck, first, last = (root / name for name in ("deck.pdf", "first.pdf", "last.pdf"))
             make_pdf(deck, orientation, sizes, effect=effect, motion=motion, angle=angle)
+            if mode == "frames":
+                frames.render("@sequence", "--snapshot", root / "sequence.png",
+                              "--snapshot-progress", "0", deck)
+                if dissolve:
+                    frames.render("@sequence", "--snapshot", root / "sequence.png",
+                                  "--snapshot-progress", "0", "--experimental", deck)
+                frames.close()
+                sys.exit(0)
+            assert mode == "checkpoints", "unknown rendering test mode"
             metadata = [metadata_test, str(deck), orientation, effect, motion]
             extra_metadata = [str(angle)] if flip or push else \
                              [str(angle), ".35", "1"] if fly else []
@@ -107,9 +117,4 @@ with tempfile.TemporaryDirectory() as directory:
                     make_pdf(changed, "V" if orientation == "H" else "H", sizes,
                              effect=effect, motion=motion)
                 assert capture(changed,.5) != middle, "orientation/direction ignored"
-            frames.render("@sequence", "--snapshot", root / "sequence.png",
-                          "--snapshot-progress", "0", deck)
-            if dissolve:
-                frames.render("@sequence", "--snapshot", root / "sequence.png",
-                              "--snapshot-progress", "0", "--experimental", deck)
     frames.close()
