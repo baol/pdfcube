@@ -297,6 +297,17 @@ void Renderer::initialize() {
                         reinterpret_cast<void*>(6 * sizeof(float)));
   glEnableVertexAttribArray(3);
 
+  glGenVertexArrays(1, &wiper_vao_);
+  glGenBuffers(1, &wiper_vbo_);
+  glBindVertexArray(wiper_vao_);
+  glBindBuffer(GL_ARRAY_BUFFER, wiper_vbo_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(wiper_mesh_.vertices), nullptr, GL_DYNAMIC_DRAW);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(WiperVertex), nullptr);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(WiperVertex),
+                        reinterpret_cast<void*>(3 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+
   matrix_uniform_ = glGetUniformLocation(program_, "transform");
   uv_rect_uniform_ = glGetUniformLocation(program_, "uv_rect");
   shade_uniform_ = glGetUniformLocation(program_, "shade");
@@ -321,6 +332,9 @@ void Renderer::release() {
   if (shard_vbo_ != 0) glDeleteBuffers(1, &shard_vbo_);
   if (vao_ != 0) glDeleteVertexArrays(1, &vao_);
   if (shard_vao_ != 0) glDeleteVertexArrays(1, &shard_vao_);
+  if (wiper_vbo_ != 0) glDeleteBuffers(1, &wiper_vbo_);
+  if (wiper_vao_ != 0) glDeleteVertexArrays(1, &wiper_vao_);
+  wiper_vbo_ = wiper_vao_ = 0;
   if (program_ != 0) glDeleteProgram(program_);
   vbo_ = vao_ = shard_vbo_ = shard_vao_ = program_ = 0;
 }
@@ -575,31 +589,46 @@ void Renderer::render(int width, int height, const FrameState& frame) {
       draw_fitted(frame.current_page);
       glDisable(GL_SCISSOR_TEST);
 
-      // A shallow squeegee rail, with dark rubber lip and a bright metal bevel.
-      // Its center covers the pixel-aligned reveal edge. Fixed geometry and
-      // closed-form travel keep memory bounded and replay exactly reproducible.
+      // The rubber stays on the reveal plane; raised pressure bridges flex
+      // slightly above it. Fixed-capacity geometry makes replay deterministic.
       glViewport(0, 0, width, height);
       const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
                           translate(0, 0, -flip_camera);
       const Matrix rail = translate(wipe.horizontal ? wipe.center : 0,
                                     wipe.horizontal ? 0 : wipe.center, 0) *
-                          rotate_z(wipe.horizontal ? 0 : pi / 2);
-      const float half = wipe.half_width;
-      constexpr float depth = .035F;
-      for (const float side : {-1.0F, 1.0F}) {
-        draw_color(Color{.11F,.14F,.17F,1},
-            (view * rail * translate(side * half,0,depth/2) *
-             rotate_y(side * pi/2) * scale(depth/2,1.08F,1)).value.data());
+                          rotate_z(wipe.direction * pi / 180);
+      // A restrained contact shadow anchors the rubber to the page. Each layer
+      // is deterministic and follows the same straight reveal edge.
+      glEnable(GL_BLEND);
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
+      for (int layer=3;layer>=1;--layer) {
+        draw_color(Color{0,0,0,.045F},
+            (view * rail * translate(-wipe.half_width*.55F,0,0) *
+             scale(wipe.half_width*(1+layer*.32F),1.18F,1)).value.data());
       }
-      draw_color(Color{.14F,.17F,.20F,1},
-          (view * rail * translate(0,0,depth) * scale(half,1.08F,1)).value.data());
-      draw_color(Color{.43F,.48F,.53F,1},
-          (view * rail * translate(-half*.12F,0,depth) * scale(half*.58F,1.08F,1)).value.data());
-      draw_color(Color{.78F,.82F,.85F,1},
-          (view * rail * translate(-half*.67F,0,depth) * scale(half*.10F,1.08F,1)).value.data());
-      draw_color(Color{.035F,.045F,.055F,1},
-          (view * rail * translate(half*.78F,0,depth) * scale(half*.22F,1.08F,1)).value.data());
+      glDisable(GL_BLEND);
+      update_wiper_mesh(frame.progress, wipe.half_width, wipe.direction, wiper_mesh_);
       glEnable(GL_DEPTH_TEST);
+      glBindVertexArray(wiper_vao_);
+      glBindBuffer(GL_ARRAY_BUFFER, wiper_vbo_);
+      glBufferSubData(GL_ARRAY_BUFFER, 0, wiper_mesh_.count * sizeof(WiperVertex),
+                      wiper_mesh_.vertices.data());
+      const Matrix transform = view * rail;
+      glUniformMatrix4fv(matrix_uniform_, 1, GL_FALSE, transform.value.data());
+      glUniform1i(textured_uniform_, false);
+      glUniform1f(shade_uniform_, 1);
+      glVertexAttrib1f(3, 0);
+      const std::array<Color,3> colors{{{.035F,.045F,.055F,1},
+                                      {.115F,.125F,.135F,1}, {.43F,.46F,.49F,1}}};
+      for (int material=0; material<3; ++material) {
+        const auto& color = colors[material];
+        glUniform4f(color_uniform_, color.red, color.green, color.blue, color.alpha);
+        const auto range = wiper_mesh_.materials[material];
+        glDrawArrays(GL_TRIANGLES, range.first, range.count);
+      }
+      glBindVertexArray(vao_);
+      glVertexAttrib1f(2, 1);
+      glVertexAttrib1f(3, 0);
       return;
     }
     if (frame.transition == Transition::push) {

@@ -50,6 +50,18 @@ struct Context {
     eglTerminate(display);
   }
 };
+std::size_t resident_bytes() {
+  std::ifstream status("/proc/self/status");
+  for (std::string line; std::getline(status,line);) {
+    if (line.starts_with("VmRSS:")) {
+      std::istringstream value(line.substr(6));
+      std::size_t kib=0;
+      value >> kib;
+      return kib*1024;
+    }
+  }
+  throw std::runtime_error("cannot read renderer RSS");
+}
 struct Pages {
   pdfcube::Document document;
   pdfcube::Renderer renderer;
@@ -71,7 +83,8 @@ int main() {
         std::istringstream request(line);
         std::vector<std::string> arguments{"pdfcube"};
         for (std::string value; request >> std::quoted(value);) arguments.push_back(value);
-        const bool sequence = arguments.size() > 1 && arguments[1] == "@sequence";
+        const bool replay = arguments.size() > 1 && arguments[1] == "@replay";
+        const bool sequence = replay || (arguments.size() > 1 && arguments[1] == "@sequence");
         if (sequence) arguments.erase(arguments.begin()+1);
         std::vector<char*> pointers;
         for (auto& argument : arguments) pointers.push_back(argument.data());
@@ -120,12 +133,21 @@ int main() {
           // Render every frame of a 60 Hz second directly, without PNG encoding
           // or advancing a wall clock. Readback catches deferred GL failures.
           std::vector<unsigned char> pixels(320*240*4);
-          for (int index=0;index<=60;++index) {
-            frame.progress = index/60.0;
-            pages->renderer.render(320,240,frame);
-            glReadPixels(0,0,320,240,GL_RGBA,GL_UNSIGNED_BYTE,pixels.data());
-            if (glGetError() != GL_NO_ERROR) throw std::runtime_error("frame rendering failed");
+          std::ofstream memory;
+          if (replay) memory.open(options.snapshot);
+          // Warm three cycles for driver streaming buffers, then measure five.
+          // Reuse parsed options and the readback buffer across replays. ASan
+          // quarantine of harness allocations must not masquerade as a renderer leak.
+          for (int cycle=0;cycle<(replay ? 8 : 1);++cycle) {
+            for (int index=0;index<=60;++index) {
+              frame.progress = index/60.0;
+              pages->renderer.render(320,240,frame);
+              glReadPixels(0,0,320,240,GL_RGBA,GL_UNSIGNED_BYTE,pixels.data());
+              if (glGetError() != GL_NO_ERROR) throw std::runtime_error("frame rendering failed");
+            }
+            if (replay && cycle >= 3) memory << resident_bytes() << '\n';
           }
+          if (replay && !memory) throw std::runtime_error("cannot write replay memory report");
         } else {
           pages->renderer.render(320,240,frame);
           pages->renderer.write_png(options.snapshot,320,240);

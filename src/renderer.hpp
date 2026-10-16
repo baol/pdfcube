@@ -3,6 +3,7 @@
 #include "document.hpp"
 #include "dissolve.hpp"
 #include "options.hpp"
+#include "wiper_blade.hpp"
 
 #include <epoxy/gl.h>
 
@@ -94,6 +95,9 @@ class Renderer {
   GLuint program_{0};
   GLuint vao_{0};
   GLuint vbo_{0};
+  WiperMesh wiper_mesh_;
+  GLuint wiper_vao_{0};
+  GLuint wiper_vbo_{0};
   GLuint shard_vao_{0};
   GLuint shard_vbo_{0};
   GLint matrix_uniform_{-1};
