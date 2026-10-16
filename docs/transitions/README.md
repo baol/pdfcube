@@ -369,3 +369,28 @@ For every new effect, add parameter/default/invalid-value coverage, sampled
 geometry and image checks, repeated-playback memory checks, and a review bundle.
 Record renderer, resolution, duration and frame-time distribution for performance
 reviews; do not infer a performance pass from still-image tests.
+
+## Fade: experimental, awaiting visual approval
+
+Fade exchanges light between two stationary slides. An sRGB decode, linear-light
+blend, and sRGB encode keep white artwork steady and avoid a dark midpoint.
+The blend weight is smoothstep (`3t² − 2t³`), with gentle starts and finishes.
+Each slide retains its own fitted aspect ratio; the surrounding background is
+part of each composition. Both full-resolution textures are ready before motion,
+and endpoints use the exact static page path.
+
+PDF `/S /Fade` uses `/Trans /D` for animation duration. `--program 4:fade` uses
+the normal 750 ms programmed animation. Direction and axis have no effect.
+Try [fade.pdf](../../examples/transitions/fade.pdf).
+
+Candidate headless software-renderer captures (light, dark, and colored slides):
+
+![Fade review checkpoints](fade-review/contact-sheet.png)
+
+Animated previews: [light](fade-review/white.gif), [dark](fade-review/dark.gif),
+[colored](fade-review/color.gif). These synthetic artwork pairs check shared
+labels and brightness; photographic material still needs visual review.
+Regenerate these previews with `python3 tools/fade_review.py` after building.
+Tests compare rendered pixels against the sRGB transfer function at three
+intermediate times, including mixed aspect ratios, and verify unchanged identical
+slides, deterministic output, PDF metadata, CLI dispatch, and exact endpoints.

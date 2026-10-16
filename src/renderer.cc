@@ -135,7 +135,32 @@ uniform vec4 solid_color;
 uniform bool textured;
 uniform float shade;
 out vec4 output_color;
+uniform bool fading;
+uniform sampler2D incoming_texture;
+uniform vec4 outgoing_fit;
+uniform vec4 incoming_fit;
+uniform vec3 fade_background;
+uniform float fade_weight;
+vec3 linear_light(vec3 c) {
+  return mix(c / 12.92, pow((c + .055) / 1.055, vec3(2.4)), step(vec3(.04045), c));
+}
+vec3 encoded_light(vec3 c) {
+  return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - .055, step(vec3(.0031308), c));
+}
+vec3 fitted_page(sampler2D image, vec4 fit) {
+  vec2 local = (uv - fit.xy) / fit.zw;
+  if (any(lessThan(local, vec2(0))) || any(greaterThan(local, vec2(1))))
+    return fade_background;
+  return texture(image, local).rgb;
+}
 void main() {
+  if (fading) {
+    vec3 a = linear_light(fitted_page(page_texture, outgoing_fit));
+    vec3 b = linear_light(fitted_page(incoming_texture, incoming_fit));
+    output_color = vec4(encoded_light(mix(a, b, fade_weight)), 1);
+    return;
+  }
+
   output_color = textured ? texture(page_texture, uv) : solid_color;
   output_color = mix(output_color, vec4(.80, .90, .96, 1.0), rim);
   output_color.rgb *= shade * light;
@@ -175,7 +200,32 @@ uniform vec4 solid_color;
 uniform bool textured;
 uniform float shade;
 out vec4 output_color;
+uniform bool fading;
+uniform sampler2D incoming_texture;
+uniform vec4 outgoing_fit;
+uniform vec4 incoming_fit;
+uniform vec3 fade_background;
+uniform float fade_weight;
+vec3 linear_light(vec3 c) {
+  return mix(c / 12.92, pow((c + .055) / 1.055, vec3(2.4)), step(vec3(.04045), c));
+}
+vec3 encoded_light(vec3 c) {
+  return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - .055, step(vec3(.0031308), c));
+}
+vec3 fitted_page(sampler2D image, vec4 fit) {
+  vec2 local = (uv - fit.xy) / fit.zw;
+  if (any(lessThan(local, vec2(0))) || any(greaterThan(local, vec2(1))))
+    return fade_background;
+  return texture(image, local).rgb;
+}
 void main() {
+  if (fading) {
+    vec3 a = linear_light(fitted_page(page_texture, outgoing_fit));
+    vec3 b = linear_light(fitted_page(incoming_texture, incoming_fit));
+    output_color = vec4(encoded_light(mix(a, b, fade_weight)), 1);
+    return;
+  }
+
   output_color = textured ? texture(page_texture, uv) : solid_color;
   output_color = mix(output_color, vec4(.80, .90, .96, 1.0), rim);
   output_color.rgb *= shade * light;
@@ -543,6 +593,7 @@ void Renderer::render(int width, int height, const FrameState& frame) {
 
   glUniform4f(uv_rect_uniform_, 0, 0, 1, 1);
   glUniform1f(shade_uniform_, 1);
+  glUniform1i(glGetUniformLocation(program_, "fading"), GL_FALSE);
   const bool panels = page_effect(frame.transition);
   const bool landed = panels && frame.progress >= 1;
   const auto& page = document_.page_info(landed ? frame.next_page : frame.current_page);
@@ -639,6 +690,30 @@ void Renderer::render(int width, int height, const FrameState& frame) {
       glBindVertexArray(vao_);
       glVertexAttrib1f(2, 1);
       glVertexAttrib1f(3, 0);
+      return;
+    }
+    if (frame.transition == Transition::fade) {
+      // Blend complete slide compositions, including independently fitted margins.
+      glViewport(0, 0, width, height);
+      const auto fit_uniform = [&](const char* name, int index) {
+        const auto& info = document_.page_info(index);
+        const auto fit = content_viewport(width, height, info.width / info.height);
+        glUniform4f(glGetUniformLocation(program_, name),
+                    float(fit.x) / width, float(height - fit.y - fit.height) / height,
+                    float(fit.width) / width, float(fit.height) / height);
+      };
+      fit_uniform("outgoing_fit", frame.current_page);
+      fit_uniform("incoming_fit", frame.next_page);
+      glUniform3f(glGetUniformLocation(program_, "fade_background"),
+                  background_.red, background_.green, background_.blue);
+      const float t = static_cast<float>(frame.progress);
+      glUniform1f(glGetUniformLocation(program_, "fade_weight"), t * t * (3 - 2 * t));
+      glActiveTexture(GL_TEXTURE1);
+      glBindTexture(GL_TEXTURE_2D, texture_for_page(frame.next_page, page_size(frame.next_page)));
+      glUniform1i(glGetUniformLocation(program_, "incoming_texture"), 1);
+      glUniform1i(glGetUniformLocation(program_, "fading"), GL_TRUE);
+      draw_page(frame.current_page, page_size(frame.current_page), Matrix::identity().value.data());
+      glUniform1i(glGetUniformLocation(program_, "fading"), GL_FALSE);
       return;
     }
     if (frame.transition == Transition::push) {

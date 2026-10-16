@@ -24,6 +24,7 @@ EXAMPLES += [(f"glitter-{name}", "Glitter", "H", "I", angle)
 EXAMPLES += [(f"wipe-{name}", "Wipe", "H", "I", angle)
              for angle,name in ((0,"right"),(90,"up"),(180,"left"),(270,"down"))]
 
+EXAMPLES += [("fade", "Fade", "H", "I", None)]
 
 def make_pdf(path, orientation="H", sizes=((640, 360), (640, 360)), pages=(0, 1),
              effect="Blinds", motion="I", angle=None, start_scale=.35, rectangular=True):

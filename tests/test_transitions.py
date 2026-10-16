@@ -1,4 +1,6 @@
 from pathlib import Path
+from io import BytesIO
+from PIL import Image
 import shlex
 import subprocess
 import sys
@@ -75,6 +77,27 @@ with tempfile.TemporaryDirectory() as directory:
             if dissolve:
                 assert capture(deck, .5, "--experimental") != middle, \
                     "experimental glass thickness was not rendered"
+            if effect == "Fade":
+                # Compare actual static compositions, including margins, to the
+                # sRGB transfer function rather than duplicating shader samples.
+                a, b = (Image.open(BytesIO(data)).convert("RGB") for data in (start, end))
+                def linear(c):
+                    c /= 255
+                    return c / 12.92 if c <= .04045 else ((c + .055) / 1.055) ** 2.4
+                def encoded(c):
+                    return 255 * (12.92 * c if c <= .0031308 else 1.055 * c ** (1/2.4) - .055)
+                for t in (.25, .5, .75):
+                    image = Image.open(BytesIO(capture(deck, t))).convert("RGB")
+                    weight = t*t*(3-2*t)
+                    for y in range(7, image.height, 19):
+                        for x in range(7, image.width, 19):
+                            expected = [encoded((1-weight)*linear(c)+weight*linear(d))
+                                        for c, d in zip(a.getpixel((x,y)), b.getpixel((x,y)))]
+                            assert all(abs(c-d) <= 2 for c,d in zip(image.getpixel((x,y)),expected)), \
+                                "fade changed brightness, fit, or easing"
+                identical = root / "identical.pdf"
+                make_pdf(identical, orientation, sizes, (0, 0), effect="Fade")
+                assert capture(identical, .5, "--program", "4:fade") == start, "shared artwork changed during fade"
             if flip and angle == 0:
                 for value in (None, 45, -90):
                     fallback = root / "fallback.pdf"
@@ -127,7 +150,7 @@ with tempfile.TemporaryDirectory() as directory:
                 assert capture(first) == start, "wiper leaked GL state into a static frame"
             quarter, three_quarters = capture(deck, .25), capture(deck, .75)
             assert len({start, quarter, middle, three_quarters, end}) == 5, "cascade stalled"
-            if not dissolve:
+            if not dissolve and effect != "Fade":
                 changed = root / "changed-direction.pdf"
                 if glitter:
                     make_pdf(changed, orientation, sizes, effect=effect,
