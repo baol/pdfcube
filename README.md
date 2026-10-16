@@ -92,6 +92,8 @@ options remain available:
 - `--bgcolor r:g:b` sets the background color.
 - `--top-color r:g:b` sets the cube cap and Push side color.
 - `--demo` enables automatic slide advancement.
+- `--experimental` enables optional animation details, currently thin glass
+  shard edges in Dissolve. It is off by default.
 - `--program n:x:...` programs durations and transition types, including cube
   (`c`), plain (`p`), and the documented PDF effects.
 - `--performance-log timings.csv` buffers animation frame timings and writes

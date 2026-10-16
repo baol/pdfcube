@@ -229,7 +229,8 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
     }
     if (!self->renderer_) {
       self->renderer_ = std::make_unique<Renderer>(
-          *self->document_, self->options_.background, self->options_.top);
+          *self->document_, self->options_.background, self->options_.top,
+          self->options_.experimental);
       self->renderer_->initialize();
     }
     const int scale = gtk_widget_get_scale_factor(GTK_WIDGET(area));

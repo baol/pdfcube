@@ -74,7 +74,13 @@ with tempfile.TemporaryDirectory() as directory:
             assert capture(deck, 1) == end, "last frame has seams, distortion or wrong page"
             if dissolve:
                 assert capture(deck, .99) == end, "shards remain before the final frame"
+                for progress, expected in ((0, start), (.99, end), (1, end)):
+                    assert capture(deck, progress, "--experimental") == expected, \
+                        "experimental glass changed an intact/clear endpoint"
             middle = capture(deck, .5)
+            if dissolve:
+                assert capture(deck, .5, "--experimental") != middle, \
+                    "experimental glass thickness was not rendered"
             if flip and angle == 0:
                 for value in (None, 45, -90):
                     fallback = root / "fallback.pdf"

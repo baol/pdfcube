@@ -110,20 +110,24 @@ const char* desktop_vertex_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
 in vec3 position;
 in vec2 texture_coordinate;
 in float surface_light;
+in float glass_rim;
 uniform mat4 transform;
 uniform vec4 uv_rect;
 out vec2 uv;
 out float light;
+out float rim;
 void main() {
   gl_Position = transform * vec4(position, 1.0);
   uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
   light = surface_light;
+  rim = glass_rim;
 }
 )";
 
 const char* desktop_fragment_shader = PDFCUBE_DESKTOP_GLSL_VERSION R"(
 in vec2 uv;
 in float light;
+in float rim;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
 uniform bool textured;
@@ -131,6 +135,7 @@ uniform float shade;
 out vec4 output_color;
 void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
+  output_color = mix(output_color, vec4(.80, .90, .96, 1.0), rim);
   output_color.rgb *= shade * light;
 }
 )";
@@ -143,14 +148,17 @@ precision highp float;
 layout(location = 0) in vec3 position;
 layout(location = 1) in vec2 texture_coordinate;
 layout(location = 2) in float surface_light;
+layout(location = 3) in float glass_rim;
 uniform mat4 transform;
 uniform vec4 uv_rect;
 out vec2 uv;
 out float light;
+out float rim;
 void main() {
   gl_Position = transform * vec4(position, 1.0);
   uv = uv_rect.xy + texture_coordinate * uv_rect.zw;
   light = surface_light;
+  rim = glass_rim;
 }
 )";
 
@@ -159,6 +167,7 @@ const char* es_fragment_shader = R"(
 precision highp float;
 in vec2 uv;
 in float light;
+in float rim;
 uniform sampler2D page_texture;
 uniform vec4 solid_color;
 uniform bool textured;
@@ -166,6 +175,7 @@ uniform float shade;
 out vec4 output_color;
 void main() {
   output_color = textured ? texture(page_texture, uv) : solid_color;
+  output_color = mix(output_color, vec4(.80, .90, .96, 1.0), rim);
   output_color.rgb *= shade * light;
 }
 )";
@@ -192,8 +202,8 @@ std::vector<unsigned char> surface_pixels_rgba(cairo_surface_t* surface) {
 
 }  // namespace
 
-Renderer::Renderer(Document& document, Color background, Color top)
-    : document_(document), background_(background), top_(top) {
+Renderer::Renderer(Document& document, Color background, Color top, bool experimental)
+    : document_(document), background_(background), top_(top), experimental_(experimental) {
   textures_.resize(static_cast<std::size_t>(document.page_count()));
   prepared_pages_.resize(static_cast<std::size_t>(document.page_count()));
   render_thread_ = std::thread(&Renderer::render_pages_in_background, this);
@@ -237,6 +247,7 @@ void Renderer::initialize() {
   glBindAttribLocation(program_, 0, "position");
   glBindAttribLocation(program_, 1, "texture_coordinate");
   glBindAttribLocation(program_, 2, "surface_light");
+  glBindAttribLocation(program_, 3, "glass_rim");
   glLinkProgram(program_);
   glDeleteShader(vertex);
   glDeleteShader(fragment);
@@ -262,7 +273,8 @@ void Renderer::initialize() {
   glEnableVertexAttribArray(1);
   // Ordinary page geometry has no lighting array and keeps neutral lighting.
   glVertexAttrib1f(2, 1);
-  shard_vertices_.reserve(glass_shard_vertex_count());
+  glVertexAttrib1f(3, 0);
+  shard_vertices_.reserve(glass_shard_vertex_count(experimental_));
 
   glGenVertexArrays(1, &shard_vao_);
   glGenBuffers(1, &shard_vbo_);
@@ -279,6 +291,9 @@ void Renderer::initialize() {
   glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(ShardVertex),
                         reinterpret_cast<void*>(5 * sizeof(float)));
   glEnableVertexAttribArray(2);
+  glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(ShardVertex),
+                        reinterpret_cast<void*>(6 * sizeof(float)));
+  glEnableVertexAttribArray(3);
 
   matrix_uniform_ = glGetUniformLocation(program_, "transform");
   uv_rect_uniform_ = glGetUniformLocation(program_, "uv_rect");
@@ -472,15 +487,14 @@ void Renderer::draw_page(int page, int maximum_size, const float* matrix) {
 }
 
 void Renderer::draw_dissolve(int page, int maximum_size, double progress) {
-  update_glass_shard_vertices(progress, shard_vertices_);
+  update_glass_shard_vertices(progress, shard_vertices_, experimental_);
   glBindVertexArray(shard_vao_);
   glBindBuffer(GL_ARRAY_BUFFER, shard_vbo_);
   glBufferSubData(GL_ARRAY_BUFFER, 0,
                   static_cast<GLsizeiptr>(shard_vertices_.size() * sizeof(ShardVertex)),
                   shard_vertices_.data());
-  // Orthographic projection keeps radial flight at a constant screen speed;
-  // the rigid 3D rotation still foreshortens each tumbling shard.
-  const Matrix view = Matrix::identity();
+  const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
+                      translate(0, 0, -flip_camera);
   glUniformMatrix4fv(matrix_uniform_, 1, GL_FALSE, view.value.data());
   glUniform1i(textured_uniform_, GL_TRUE);
   glActiveTexture(GL_TEXTURE0);
@@ -494,6 +508,7 @@ void Renderer::draw_dissolve(int page, int maximum_size, double progress) {
   // Array draws may leave the current generic attribute unspecified. Restore
   // neutral lighting before any ordinary page or transition is drawn again.
   glVertexAttrib1f(2, 1);
+  glVertexAttrib1f(3, 0);
 }
 
 void Renderer::draw_color(const Color& color, const float* matrix) {

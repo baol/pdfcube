@@ -18,7 +18,7 @@ def run(*arguments, home=None):
 help_result = run("--help")
 assert help_result.returncode == 0, help_result.stderr
 for option in ("--bgcolor", "--top-color", "--demo", "--program",
-               "--performance-log", "--no-fullscreen"):
+               "--performance-log", "--no-fullscreen", "--experimental"):
     assert option in help_result.stdout, option
 
 version = run("--version")
@@ -37,6 +37,8 @@ for arguments in (
     ("-b", "0:0:0", "--help"),
     ("-t", "0.7:0.6:0.6", "--help"),
     ("-n", "--help"),
+    ("--experimental", "--help"),
+    ("--experimental=false", "--help"),
 ):
     short_option = run(*arguments)
     assert short_option.returncode == 0, (arguments, short_option.stderr)
