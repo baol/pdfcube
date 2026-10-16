@@ -1,31 +1,11 @@
-# PDFCube
-
-The [transition design and gallery](docs/transitions/README.md) describes
-the effects and how to generate videos and contact sheets.
-Ready-to-open [example PDFs](examples/transitions/README.md) are included.
-A self-contained [LaTeX/Beamer showcase](examples/showcase/README.md) covers
-all standard PDF transitions with vector artwork and next-effect labels.
-Blinds uses cascading slats; Split uses opening/closing 3D doors;
-Cover/Uncover use curved page flips in all four directions. These have
-reproducible screenshots and review videos linked from the roadmap.
-Fly adds a controlled leaf-like drift in arbitrary PDF directions, with the
-same reproducible review assets. Push transfers momentum between two softly
-compressing slide blocks in all four PDF directions. Dissolve fractures the
-outgoing slide into deterministic glass shards that clear to reveal the next page.
-Glitter releases directional fragments with brief warm sparks. Wipe sweeps a
-3D wiper with a bowed spine, pressure brackets and subtle flex across the slide in all four cardinal directions, revealing
-the next page with each image fitted to its own aspect ratio. Fade exchanges
-light between stationary slides with gently eased timing; Replace is instant.
-
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 
-PDFCube is a focused PDF presentation viewer with animated 3D cube
-transitions, programmed slide timing, and keyboard-controlled zoom regions.
-It is especially useful for slide decks produced by LaTeX Beamer and office
-suites.
+# PDFCube
 
-PDFCube uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3,
-libepoxy, Poppler GLib, Cairo, Boost Program Options, and Meson.
+PDFCube is a PDF presentation viewer with animated transitions, automatic slide
+timing, and keyboard-controlled zoom. It brings cube rotations, page flips,
+shattering glass, and smooth fades to slide decks from LaTeX Beamer and office
+suites.
 
 <!-- showcase-video:start -->
 
@@ -35,7 +15,18 @@ https://github.com/user-attachments/assets/27a9d3dc-1b5c-498d-9909-49840b4d3370
 
 <!-- showcase-video:end -->
 
+Explore the [transitions and their design](docs/transitions/README.md), try the
+[example PDFs](examples/transitions/README.md), or read about the
+[LaTeX/Beamer showcase](examples/showcase/README.md).
+
+Download the **released showcase PDF** from the
+[latest GitHub release](https://github.com/baol/pdfcube/releases/latest), listed
+as `pdfcube-VERSION-showcase.pdf`. Open it in PDFCube to try all the transitions. It is also included in Debian packages and AppImages.
+
 ## Requirements
+
+PDFCube uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3,
+libepoxy, Poppler GLib, Cairo, Boost Program Options, and Meson.
 
 PDFCube requires GTK 4.12 or newer, Poppler GLib 22.0 or newer, and an
 OpenGL or OpenGL ES 3.0-capable driver. On Debian 13 or Ubuntu 24.04, install
