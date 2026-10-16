@@ -31,7 +31,10 @@ edge and recover fully. PDF direction selects right, up, left, or down; missing
 or unsupported angles default to right.
 PDF Dissolve cracks the outgoing page into irregular glass-like shards, then
 moves the fragments away to reveal the destination page.
-Other unsupported PDF transitions currently change pages instantly.
+PDF Glitter releases directional fragments and warm sparks.
+PDF Wipe sweeps a raised physical wiper across the slide.
+PDF Fade exchanges light between stationary slides with gently eased timing.
+PDF Replace and unrecognized transition types change pages instantly.
 PDF transition duration controls the animation; page duration controls how
 long automatic playback displays a slide. These are separate values.
 .TP
@@ -85,6 +88,8 @@ selects directional fragments and sparks with a 750 ms animation.
 selects a raised physical wiper with a 750 ms animation and the PDF direction
 (0/right, 90/up, 180/left, 270/down; other angles default to right).
 Both pages retain their fitted aspect ratios.
+.B fade
+selects a linear-light crossfade with a 750 ms animation.
 The last pair is repeated for remaining slides.
 For example,
 .B \-\-program 5:c:3:p
@@ -127,7 +132,7 @@ Toggle fullscreen mode.
 Toggle automatic advancement.
 .TP
 .B 1 through 9
-Jump to page 5*(n-1). These unmodified keys are page shortcuts.
+Jump to pages 1, 6, 11, and so on (page 5*(n-1)+1). These unmodified keys are page shortcuts.
 .TP
 .B Ctrl-1 through Ctrl-9
 Jump to the corresponding PDF or programmed cube section. The Ctrl modifier

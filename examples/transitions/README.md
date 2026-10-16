@@ -22,6 +22,7 @@ Ready-to-open diagnostic slides:
   [lower right](fly-out-down-right.pdf)
 - Push: [right](push-right.pdf), [up](push-up.pdf),
   [left](push-left.pdf), [down](push-down.pdf)
+- [Fade](fade.pdf)
 - [Dissolve](dissolve.pdf)
 - Glitter: [right](glitter-right.pdf), [down](glitter-down.pdf),
   [lower right](glitter-down-right.pdf)
@@ -58,7 +59,7 @@ Regenerate all PDFs deterministically with Python's standard library:
 python3 tests/transition_fixture.py examples/transitions
 ```
 
-The generator is the source of truth; do not edit the PDFs by hand.
+Regenerate the PDFs from the generator, which is their source of truth.
 See the [review roadmap](../../docs/transitions/README.md) for videos and tests.
 ## Wipe
 

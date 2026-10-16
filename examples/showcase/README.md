@@ -93,9 +93,7 @@ MP4 output. Recording ignores interactive demo mode and requires no `--program`.
 - Dissolve, Glitter (right/down/lower right), Fade and Replace.
 
 Glitter and Wipe are animated in PDFCube. Glitter releases fading fragments and
-sparks; Wipe moves a raised blade in the requested direction. Fade currently
-falls back to an instant change; its slide says so and preserves the real PDF
-metadata for the planned implementation. Other viewers may implement them
+sparks; Wipe moves a raised blade in the requested direction. Fade blends the stationary slides in linear light with gently eased timing. Other viewers may implement them
 or ignore PDF transitions entirely. Replace is deliberately instant.
 
 PDF transitions are stored on the **destination** page. Each `\ShowSlide` call

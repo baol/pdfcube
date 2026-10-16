@@ -1,7 +1,7 @@
 # PDFCube
 
-The [transition roadmap and review gallery](docs/transitions/README.md) describes
-new effects, their validation gates, and how to generate videos and contact sheets.
+The [transition design and gallery](docs/transitions/README.md) describes
+the effects and how to generate videos and contact sheets.
 Ready-to-open [example PDFs](examples/transitions/README.md) are included.
 A self-contained [LaTeX/Beamer showcase](examples/showcase/README.md) covers
 all standard PDF transitions with vector artwork and next-effect labels.
@@ -14,8 +14,8 @@ compressing slide blocks in all four PDF directions. Dissolve fractures the
 outgoing slide into deterministic glass shards that clear to reveal the next page.
 Glitter releases directional fragments with brief warm sparks. Wipe sweeps a
 3D wiper with a bowed spine, pressure brackets and subtle flex across the slide in all four cardinal directions, revealing
-the next page without stretching either image. Fade remains the next planned
-effect; Replace is instant.
+the next page with each image fitted to its own aspect ratio. Fade exchanges
+light between stationary slides with gently eased timing; Replace is instant.
 
 [![CI](https://github.com/baol/pdfcube/actions/workflows/ci.yml/badge.svg)](https://github.com/baol/pdfcube/actions/workflows/ci.yml)
 
@@ -24,10 +24,8 @@ transitions, programmed slide timing, and keyboard-controlled zoom regions.
 It is especially useful for slide decks produced by LaTeX Beamer and office
 suites.
 
-The current PDFCube release is a complete modernization of the original
-application. It uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3,
-libepoxy, Poppler GLib, Cairo, Boost Program Options, and Meson. The obsolete
-GtkGLExt, fixed-function OpenGL, and Autotools implementation has been removed.
+PDFCube uses C++20, GTK 4 `GtkGLArea`, shader-based OpenGL/OpenGL ES 3,
+libepoxy, Poppler GLib, Cairo, Boost Program Options, and Meson.
 
 <!-- showcase-video:start -->
 
@@ -57,8 +55,8 @@ sudo apt install python3 python3-pil dbus-daemon libegl-dev libgl1-mesa-dri font
 ```
 
 Frame tests render explicit progress values in one headless context per case;
-they do not wait through animation durations. Every test has a 500 ms
-timing SLO, checked before pushing, including cold graphics setup. Timing misses are
+synthetic progress makes each capture independent of playback duration.
+Every test has a 500 ms timing SLO, checked before pushing, including cold graphics setup. Timing misses are
 reported separately from functional failures. See
 [the test contract](tests/README.md). The optional review gallery additionally
 requires Xvfb, Xauth, and ffmpeg.
@@ -78,8 +76,7 @@ pacman -S --needed mingw-w64-ucrt-x86_64-{toolchain,meson,ninja,python,gtk4,libe
 The renderer selects GLSL 1.30 or GLSL ES 3.00 to match the context supplied
 by GTK. Linux is tested on X11 and Wayland; CI also compiles and exercises the
 command-line interface on Windows and macOS. Actual GPU/driver combinations
-are tracked in [COMPATIBILITY.md](COMPATIBILITY.md) rather than assumed to work
-untested.
+are tracked in [COMPATIBILITY.md](COMPATIBILITY.md) with their validation status.
 
 ## Build and install
 
@@ -93,9 +90,9 @@ sudo meson install -C build
 Build the Beamer showcase explicitly with `meson compile -C build doc`.
 This documentation target requires TeX Live with Beamer and PGF/TikZ;
 see the [showcase build instructions](examples/showcase/README.md).
-The default application build does not build documentation.
+The `doc` target builds documentation separately from the default application target.
 
-For a local build without installation:
+Run directly from a local build:
 
 ```sh
 ./build/src/pdfcube presentation.pdf
@@ -116,7 +113,7 @@ options remain available:
 - `--program n:x:...` programs durations and transition types, including cube
   (`c`), plain (`p`), and the documented PDF effects.
 - `--performance-log timings.csv` buffers animation frame timings and writes
-  them on exit, without file I/O during motion.
+  them on exit, keeping file I/O outside active animation.
 - `--no-fullscreen` starts in a window.
 
 When no PDF is supplied, PDFCube opens a GTK file chooser. Options can also
@@ -135,20 +132,19 @@ See `man pdfcube` for the full list.
 
 ### Frame pacing
 
-PDFCube follows GTK's compositor-synchronized frame clock rather than imposing
-a fixed frame rate. Full-resolution previous and next pages are rendered in the
+PDFCube follows GTK's compositor-synchronized frame clock. Full-resolution previous and next pages are rendered in the
 background and uploaded to the GPU while the current slide is idle. If a page
 is not ready when navigation is requested, the transition remains at its exact
-first frame until preparation finishes; PDF rendering and texture upload do not
-consume the active animation clock.
+first frame until preparation finishes. The animation clock starts once both
+full-resolution textures are ready.
 
 Use `--performance-log timings.csv` with a representative presentation. The CSV
 records displayed-frame intervals, CPU submission time, and whether a frame was
 the stationary preparation frame. At 60 Hz, animation-frame intervals
 should remain close to 16,667 microseconds; at 120 Hz, close to 8,333. CPU
-submission does not include asynchronous GPU completion, but interval spikes
-expose visible compositor or rendering stalls. Slide texture resolution is never
-reduced to meet a frame budget.
+submission measures CPU work; GPU completion is asynchronous. Interval spikes
+help identify compositor or rendering stalls. Slides retain full texture resolution
+throughout the animation.
 
 ## Tests
 
@@ -157,9 +153,12 @@ meson test -C build --print-errorlogs
 ```
 
 The suite checks the public command-line contract and produces deterministic
-headless rendering snapshots under Xvfb. It covers page rendering, cube and
+headless rendering snapshots in surfaceless EGL contexts, plus one GTK
+integration snapshot under Xvfb. It covers page rendering, cube and
 plain programs, configured colors, and command-line-over-config precedence.
 `--snapshot` and `--snapshot-progress` are private regression-test hooks.
+
+See the [documentation and usability roadmap](docs/ROADMAP.md) for planned improvements.
 
 ## Release and packaging
 

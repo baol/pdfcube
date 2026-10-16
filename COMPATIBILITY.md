@@ -15,16 +15,15 @@ PDFCube selects the matching shader dialect after the context is current.
 | Windows | GTK UCRT64 | Build, CLI, MSI assembly and extraction smoke test | Manual installed-MSI rendering test |
 | macOS | GTK/Homebrew | Build, CLI, DMG assembly and signature verification | Manual installed-DMG rendering test |
 
-KDE, GNOME, and other desktop environments are not separate renderer targets;
-they are covered through GTK's X11 and Wayland backends. GPU and driver
-combinations are only considered verified after they appear in this matrix.
+KDE, GNOME, and other desktop environments use GTK's X11 and Wayland backends.
+GPU and driver combinations are only considered verified after they appear in this matrix.
 
-## Out of scope for the current release
+## Rendering and package trust
 
-- OpenGL 2.x and OpenGL ES 2.x
-- Vulkan, Metal, and Direct3D renderers
-- Vendor-trusted Windows Authenticode signatures and Apple notarization
+The rendering baseline is desktop OpenGL 3.0 or OpenGL ES 3.0. Native packages
+use GTK's platform integration and bundle the supporting runtime libraries.
 
-Those trust integrations require project-owned signing identities. Automated
-CI packages are still checked for complete assembly and basic execution, but
-that does not replace rendering tests on installed native packages.
+macOS packages use ad-hoc signatures; Windows packages are unsigned. Apple
+notarization and Windows Authenticode integration require project-owned signing
+identities. Automated package checks cover assembly and basic execution;
+installed-package rendering is verified through the manual tests above.

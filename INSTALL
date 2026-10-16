@@ -7,8 +7,10 @@ Requirements
 PDFCube requires a C++20 compiler, Meson 1.3 or newer, Ninja, GTK 4.12 or
 newer, Poppler GLib 22.0 or newer, Cairo, libepoxy, and Boost Program Options.
 The renderer supports desktop OpenGL and OpenGL ES 3 contexts.
-Python 3, Xvfb, Xauth, and a software OpenGL driver such as Mesa DRI are
-needed to run the complete rendering test suite on Linux. Windows builds use
+Linux tests use Python 3, Pillow, EGL development headers, DejaVu fonts,
+dbus-run-session, and a software OpenGL driver such as Mesa DRI. Transition
+frames use surfaceless EGL; the GTK integration smoke test uses Xvfb and Xauth.
+See tests/README.md for the test contract. Windows builds use
 the MSYS2 UCRT64 GTK, Poppler, libepoxy, and Boost packages. macOS builds use
 their Homebrew equivalents.
 
