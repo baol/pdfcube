@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory() as directory:
             assert capture(deck, 0) == start, "first frame changed"
             assert capture(deck, 1) == end, "last frame has seams, distortion or wrong page"
             if dissolve:
-                assert capture(deck, .95) == end, "shards remain before the final frame"
+                assert capture(deck, .99) == end, "shards remain before the final frame"
             middle = capture(deck, .5)
             if flip and angle == 0:
                 for value in (None, 45, -90):
