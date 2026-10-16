@@ -75,7 +75,7 @@ if host_machine.system() == 'linux'
   render_environment.set('FONTCONFIG_FILE', meson.current_source_dir() / 'fonts.conf')
   render_environment.set('XDG_CACHE_HOME', meson.current_build_dir() / 'native-test-cache')
   # Every case targets 500 ms, including cold setup. Serialize to avoid GPU contention.
-  foreach effect : ['Blinds', 'Split', 'Cover', 'Uncover', 'Fly', 'Push', 'Dissolve', 'Glitter', 'Wipe']
+  foreach effect : ['Blinds', 'Split', 'Cover', 'Uncover', 'Fly', 'Push', 'Dissolve', 'Glitter', 'Wipe', 'Fade']
     axes = ['H']
     angles = ['none']
     motions = ['I']

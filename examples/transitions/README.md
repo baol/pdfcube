@@ -71,3 +71,8 @@ normal Space/Page Down playback or `--program 4:wipe`.
 
 `glitter-right.pdf`, `glitter-down.pdf` and `glitter-down-right.pdf` demonstrate
 the experimental directional flare and sparks transition. Press Space to advance.
+
+## Fade
+
+[fade.pdf](fade.pdf) demonstrates a stationary, linear-light crossfade with gently
+eased timing. Press Space to advance; `/Trans /D` sets its 1.25-second duration.

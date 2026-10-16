@@ -18,7 +18,7 @@ namespace pdfcube {
 
 enum class Transition {
   none, cube_forward, cube_backward, switch_page, blinds, split, cover, uncover, fly, push,
-  dissolve, glitter, wipe
+  dissolve, glitter, wipe, fade
 };
 
 inline bool page_effect(Transition transition) {
@@ -26,7 +26,7 @@ inline bool page_effect(Transition transition) {
          transition == Transition::cover || transition == Transition::uncover ||
          transition == Transition::fly || transition == Transition::push ||
          transition == Transition::dissolve || transition == Transition::glitter ||
-         transition == Transition::wipe;
+         transition == Transition::wipe || transition == Transition::fade;
 }
 
 struct FrameState {

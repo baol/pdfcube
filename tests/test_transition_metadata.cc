@@ -1,6 +1,7 @@
 #include "document.hpp"
 #include <cmath>
 #include <cstdlib>
+#include <string>
 
 int main(int argc, char** argv) {
   if (argc != 3 && argc != 5 && argc != 6 && argc != 8) return EXIT_FAILURE;
@@ -9,12 +10,13 @@ int main(int argc, char** argv) {
   const bool split = argc >= 5 && argv[3][0] == 'S';
   const bool cover = argc >= 5 && argv[3][0] == 'C';
   const bool uncover = argc >= 5 && argv[3][0] == 'U';
-  const bool fly = argc >= 5 && argv[3][0] == 'F';
+  const bool fly = argc >= 5 && std::string(argv[3]) == "Fly";
   const bool push = argc >= 5 && argv[3][0] == 'P';
   const bool dissolve = argc >= 5 && argv[3][0] == 'D';
   const bool wipe = argc >= 5 && argv[3][0] == 'W';
   const bool glitter = argc >= 5 && argv[3][0] == 'G';
-  const auto type = split ? POPPLER_PAGE_TRANSITION_SPLIT :
+  const auto type = argc >= 5 && std::string(argv[3]) == "Fade" ? POPPLER_PAGE_TRANSITION_FADE :
+                    split ? POPPLER_PAGE_TRANSITION_SPLIT :
                     cover ? POPPLER_PAGE_TRANSITION_COVER :
                     uncover ? POPPLER_PAGE_TRANSITION_UNCOVER :
                     fly ? POPPLER_PAGE_TRANSITION_FLY :
