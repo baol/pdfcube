@@ -169,18 +169,25 @@ shallow side faces as well as the classic cube caps.
 
 ## Dissolve: experimental, awaiting visual approval
 
-Dissolve treats the outgoing page as a thin glass panel. A deterministic mesh
-of 240 irregular triangular shards reacts to a single central impact from
-behind. A fast fracture wave launches the shards radially outward and toward
-the viewer. Motion starts with an impulse and slows under gentle drag, keeping
-the pieces in view long enough to follow their rotation. Each rigid shard
-rotates at constant angular velocity about a fixed axis tangent to its radial
-flight direction, with a small individual spin. Both faces remain visible as
-the pieces tumble and fall under restrained gravity, revealing the destination
-beneath them.
+Dissolve treats the outgoing page as a thin glass panel hit from behind at
+its center. Radial cracks and irregular circular cracks partition the panel
+into 64 physical pieces: small triangular impact chips and larger polygonal
+outer splinters. A polygon remains one rigid piece even when the GPU draws it
+as two triangles.
 
-After 75% progress, a smooth outward sweep clears the remaining shards by
-95%, leaving the destination unobstructed before the final static frame.
+A fast fracture wave releases the pieces into a common outward impulse, with
+modest variation in direction and speed. Translation stays at constant screen
+speed throughout flight. Outer splinters leave first, followed by the central
+chips; pieces do not slow down to meet a shared exit time. Every piece is
+completely outside the viewport by 99%, without a late sweep, acceleration,
+shrink, or fade.
+
+Each piece keeps a fixed tumbling axis tangent to its flight direction and a
+constant individual angular velocity. Distinct angular speeds avoid a
+synchronized edge-on flash. Restrained two-sided lighting makes the rotation
+readable. Orthographic projection preserves constant screen speed while the
+3D rotation still foreshortens the splinters. There is no gravity or camera
+movement. Both faces retain the outgoing slide texture.
 
 The fracture and motion are closed-form functions of progress: there is no
 runtime randomness or accumulating physics state. All shard vertices are sent
@@ -190,7 +197,8 @@ textures are prepared at full output resolution before motion begins. The exact
 destination pages without cracks, seams or reduced resolution.
 
 Try the committed [Dissolve example](../../examples/transitions/dissolve.pdf).
-Its five-frame review capture uses the same fixture and renderer as the tests:
+The image below records an earlier candidate; regenerate the review bundle
+with the current renderer to review the redesigned motion:
 
 ![Glass-shatter Dissolve](dissolve.png)
 
