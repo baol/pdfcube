@@ -26,7 +26,7 @@ inline WipeGeometry wipe_geometry(double progress, int degrees, int width, int h
   const bool positive = direction == 0 || direction == 90;
   const int extent = horizontal ? width : height;
   const float half_pixels = std::max(2.0F, .014F * std::min(width, height));
-  const float margin = 2 * half_pixels / extent;
+  const float margin = 4 * half_pixels / extent;
   const double p = std::clamp(progress, 0.0, 1.0);
   const double eased = p * p * (3 - 2 * p);
   const double front = -margin + (1 + 2 * margin) * eased;

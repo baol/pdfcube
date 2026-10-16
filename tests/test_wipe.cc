@@ -1,4 +1,5 @@
 #include "wipe.hpp"
+#include "wiper_blade.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -41,4 +42,26 @@ int main() {
     assert(wipe_direction(invalid) == 0);
     assert(wipe_geometry(.37,invalid,320,240).center == wipe_geometry(.37,0,320,240).center);
   }
+  assert(wiper_flex(0) == 0 && wiper_flex(1) == 0);
+  WiperMesh mesh, again;
+  for (int direction : {0,90,180,270}) for (int step=0; step<=32; ++step) {
+    const double p = step/32.0;
+    update_wiper_mesh(p,.025F,direction,mesh);
+    update_wiper_mesh(p,.025F,direction,again);
+    assert(mesh.count > 0 && mesh.count <= static_cast<int>(mesh.vertices.size()));
+    assert(mesh.count == again.count && std::abs(wiper_flex(p)) < .07F);
+    int end=0;
+    for (auto range : mesh.materials) {
+      assert(range.first == end && range.count > 0 && range.count % 3 == 0);
+      end += range.count;
+    }
+    assert(end == mesh.count);
+    for (int i=0;i<mesh.count;++i) {
+      const auto v=mesh.vertices[i], other=again.vertices[i];
+      assert(std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z));
+      assert(v.z >= -.001F && v.light >= .3F && v.light <= 1.2F);
+      assert(v.x == other.x && v.y == other.y && v.z == other.z && v.light == other.light);
+    }
+  }
+
 }

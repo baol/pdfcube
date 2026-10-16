@@ -22,11 +22,13 @@ Geometry is a function of progress, never an uncontrolled physics simulation.
 
 ## Wipe: experimental, awaiting visual approval
 
-A shallow squeegee rail sweeps across the viewport, clearing the outgoing page
-and revealing the destination behind it. A dark rubber lip, metal face and
-highlighted bevel make the moving edge visible. The pages stay flat, readable
+A three-dimensional wiper sweeps straight across the viewport, clearing the outgoing
+page and revealing the destination behind it. A rubber contact lip, bowed pressure
+spine, raised brackets and metal pivot give it a mechanical silhouette. Directional
+lighting shows the depth of each part. A small damped flex settles during the sweep. Beveled matte surfaces and a
+soft contact shadow keep the blade grounded against the page. The pages stay flat, readable
 and at full resolution. Travel eases in and out and extends beyond both edges,
-so the rail enters and leaves completely. There is no simulation or accumulating
+so the blade enters and leaves completely. There is no simulation or accumulating
 state, and no per-frame geometry allocation.
 
 PDF `/Di` values 0, 90, 180 and 270 select right, up, left and down. Missing or
@@ -36,7 +38,7 @@ normal 750 ms programmed duration; document playback uses PDF `/Trans /D`, with
 
 Each page keeps its own fitted aspect ratio. The unrevealed region includes the
 outgoing letterbox, so a differently shaped incoming page cannot show through
-early. The clipping edge is pixel-aligned and concealed by the rail. At 0% and
+early. The clipping edge is pixel-aligned and concealed by the blade. At 0% and
 100% the renderer bypasses the wiper and draws the exact static page.
 
 Try the [right](../../examples/transitions/wipe-right.pdf),
@@ -55,8 +57,8 @@ Replace already changes the page instantly.
 
 Local Wipe captures were inspected with GTK 4.22.4, Poppler 26.01 and software
 OpenGL, including a midpoint from the updated Beamer deck. All 26 Wipe cases
-pass with address/undefined-behavior sanitizers. Cold sanitizer checkpoint cases
-missed the 500 ms SLO (up to 1.47 seconds); this is recorded separately from
+pass with address/undefined-behavior sanitizers. In the refined-blade run, 13 sanitizer cases
+missed the 500 ms SLO (535–740 ms); this is recorded separately from
 functional correctness and does not establish a hardware performance pass.
 
 ## Glitter: experimental, awaiting visual approval

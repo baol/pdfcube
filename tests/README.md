@@ -66,3 +66,8 @@ and decoding. It retains dwell/transition frame counts, endpoint, orientation,
 codec, dimensions, faststart, and parser-guard checks. On the local runner it
 takes about 0.6 seconds; report its 500 ms SLO miss rather than dropping checks.
 Publication/README replacement tests mock remote calls and remain below 500 ms.
+
+Wipe geometry coverage also checks fixed mesh capacity, contiguous material ranges,
+finite lit vertices, deterministic flex and mesh replay at explicit progress values.
+The replay memory check warms three cycles and measures five more in one command, reusing readback storage
+so parser and harness allocation retention does not contaminate the renderer bound.

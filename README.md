@@ -13,7 +13,7 @@ same reproducible review assets. Push transfers momentum between two softly
 compressing slide blocks in all four PDF directions. Dissolve fractures the
 outgoing slide into deterministic glass shards that clear to reveal the next page.
 Glitter releases directional fragments with brief warm sparks. Wipe sweeps a
-raised, beveled wiper across the slide in all four cardinal directions, revealing
+3D wiper with a bowed spine, pressure brackets and subtle flex across the slide in all four cardinal directions, revealing
 the next page without stretching either image. Fade remains the next planned
 effect; Replace is instant.
 
