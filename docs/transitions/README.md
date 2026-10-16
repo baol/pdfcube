@@ -12,12 +12,52 @@ review, to accepted; a passing build is not visual approval.
 | 4 | Fly | A page drifting like a leaf on a controlled gust | Direction, scale, readable flight, controlled landing |
 | 5 | Push | Cube pushes a soft cube | Deterministic contact and recovery |
 | 6 | Dissolve / Glitter | Glass shatter / flare and sparks | Stable geometry, bounded memory and brightness |
-| 7 | Wipe / Fade / Replace | Physical wiper / crossfade / instant | Direction, clean endpoints |
+| 7 | Wipe | Raised physical wiper sweeping the outgoing image away | Four directions, exact reveal mask and endpoints |
+| 8 | Fade / Replace | Crossfade (next) / instant (already available) | Clean endpoints |
 
 Box keeps the classic cube. Unsupported PDF effects currently replace the page.
 Future effects must preserve document ratio, prepare full-resolution source
 images before motion, and finish on the exact static destination image.
 Geometry is a function of progress, never an uncontrolled physics simulation.
+
+## Wipe: experimental, awaiting visual approval
+
+A shallow squeegee rail sweeps across the viewport, clearing the outgoing page
+and revealing the destination behind it. A dark rubber lip, metal face and
+highlighted bevel make the moving edge visible. The pages stay flat, readable
+and at full resolution. Travel eases in and out and extends beyond both edges,
+so the rail enters and leaves completely. There is no simulation or accumulating
+state, and no per-frame geometry allocation.
+
+PDF `/Di` values 0, 90, 180 and 270 select right, up, left and down. Missing or
+invalid angles default to right. `--program 4:wipe` uses the same effect and the
+normal 750 ms programmed duration; document playback uses PDF `/Trans /D`, with
+`/Dur` reserved for dwell time. Explicit cube and instant navigation are unchanged.
+
+Each page keeps its own fitted aspect ratio. The unrevealed region includes the
+outgoing letterbox, so a differently shaped incoming page cannot show through
+early. The clipping edge is pixel-aligned and concealed by the rail. At 0% and
+100% the renderer bypasses the wiper and draws the exact static page.
+
+Try the [right](../../examples/transitions/wipe-right.pdf),
+[up](../../examples/transitions/wipe-up.pdf), [left](../../examples/transitions/wipe-left.pdf)
+and [down](../../examples/transitions/wipe-down.pdf) diagnostic PDFs, or the
+[Beamer showcase](../../examples/showcase/README.md). Candidate contact sheets:
+
+![Wipe right](wipe-right.png)
+
+![Wipe up](wipe-up.png)
+
+Other directions: [left](wipe-left.png), [down](wipe-down.png).
+These are software-renderer candidates, not visual acceptance or hardware
+performance measurements. Fade is the next unimplemented roadmap effect;
+Replace already changes the page instantly.
+
+Local Wipe captures were inspected with GTK 4.22.4, Poppler 26.01 and software
+OpenGL, including a midpoint from the updated Beamer deck. All 26 Wipe cases
+pass with address/undefined-behavior sanitizers. Cold sanitizer checkpoint cases
+missed the 500 ms SLO (up to 1.47 seconds); this is recorded separately from
+functional correctness and does not establish a hardware performance pass.
 
 ## Glitter: experimental, awaiting visual approval
 
@@ -241,16 +281,16 @@ python3 tools/transition_gallery.py build/src/pdfcube build/transition-gallery
 
 Add `--update-docs` to regenerate the checked-in contact sheets from those same
 captures. The default 33 samples include exact quarter-progress frames.
-Use `--effects Cover Uncover` for a focused page-flip review; CI captures all
-implemented effects by default. Gallery capture reuses one Xvfb display and
+Use `--effects Wipe` for a focused wiper review. The manual transition-review
+workflow captures all implemented effects by default. Gallery capture reuses one Xvfb display and
 captures up to four frames concurrently. Use `--jobs N` to tune that limit for
 the available CPU and memory; this does not change the generated frames.
 
 Open build/transition-gallery/index.html. Each effect/axis/direction has a looping video,
 five-frame contact sheet, full-resolution individual frames, and its input PDF.
 The manifest records the source revision and binary version. Rebuild first;
-captures must come from the revision under review. CI uploads this bundle on
-every pull request. Download and unzip it to view locally.
+captures must come from the revision under review. The manual transition-review
+workflow uploads the bundle; ordinary CI keeps only one GUI smoke capture. Download and unzip it to view locally.
 
 Candidate captures are never automatically promoted to golden references.
 The reviewer checks framing, direction, readability, motion and final alignment,
@@ -291,6 +331,11 @@ native-platform or motion approval.
 - Dissolve checks deterministic fracture geometry, bounded shard parameters,
   portrait/landscape/mixed ratios, PDF metadata, program selection, distinct
   sampled stages, exact endpoints and a reproducible example.
+- Wipe checks bounded and monotonic clipping, symmetric travel, all four directions,
+  omitted/invalid angle fallback, exact revealed/unrevealed pixel regions including
+  mixed page letterboxes, deterministic replay, GL state cleanup, PDF metadata,
+  program dispatch, complete frame sweeps, repeated-playback RSS bounds in one
+  shared context, and reproducible example PDFs.
 - Pending manual approval: realistic Beamer deck; HD/2K/4K frame-time measurements;
   native Wayland/NVIDIA, X11, Windows and macOS playback; long-running playback
   memory checks. Still-frame and geometry checks are not substitutes for these.

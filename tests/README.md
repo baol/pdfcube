@@ -31,6 +31,11 @@ and reads back all 61 frames of a 60 Hz second, including experimental glass.
 A small Fontconfig fixture uses DejaVu Sans instead of scanning all system font folders;
 both cold font and shader initialization remain inside the measured budget.
 
+Wipe cases compare the regions ahead of and behind the blade with exact static
+page pixels, including mixed page letterboxes. They verify that the next static
+frame is unaffected by clipping/depth state. Geometry tests sample 1001 explicit
+progress values per direction and viewport shape without wall-clock waits.
+
 Clock and auto-advance tests use synthetic timestamps and a recording
 scheduler. They verify frame progress and the exact millisecond delays sent to
 the backend, including cancellation and idle dispatch. They never sleep.

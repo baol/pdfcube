@@ -21,7 +21,7 @@ parser.add_argument("--jobs", type=int, default=min(4, os.cpu_count() or 1),
                     help="Number of snapshots to capture concurrently (default: up to 4)")
 parser.add_argument("--update-docs", action="store_true",
                     help="Refresh the checked-in contact sheets from these captures")
-parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover", "Fly", "Push", "Dissolve", "Glitter"),
+parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover", "Fly", "Push", "Dissolve", "Glitter", "Wipe"),
                     help="Capture only selected effects (default: all)")
 parser.add_argument("--inside-xvfb", action="store_true", help=argparse.SUPPRESS)
 args = parser.parse_args()

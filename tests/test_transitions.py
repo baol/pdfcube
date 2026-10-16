@@ -17,6 +17,7 @@ fly = effect == "Fly"
 push = effect == "Push"
 dissolve = effect == "Dissolve"
 glitter = effect == "Glitter"
+wipe = effect == "Wipe"
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
@@ -57,7 +58,7 @@ with tempfile.TemporaryDirectory() as directory:
                 sys.exit(0)
             assert mode == "checkpoints", "unknown rendering test mode"
             metadata = [metadata_test, str(deck), orientation, effect, motion]
-            extra_metadata = [str(angle)] if flip or push or glitter else \
+            extra_metadata = [str(angle)] if flip or push or glitter or wipe else \
                              [str(angle), ".35", "1"] if fly else []
             subprocess.run(metadata + extra_metadata, check=True)
             make_pdf(first, orientation, sizes, (0,))
@@ -79,7 +80,7 @@ with tempfile.TemporaryDirectory() as directory:
                     fallback = root / "fallback.pdf"
                     make_pdf(fallback, orientation, sizes, effect=effect, angle=value)
                     assert capture(fallback, .5) == middle, "default/invalid direction differs"
-            if (push or glitter) and angle == 0:
+            if (push or glitter or wipe) and angle == 0:
                 for value in (None, 45, -90):
                     fallback = root / "fallback.pdf"
                     make_pdf(fallback, orientation, sizes, effect=effect, angle=value)
@@ -107,6 +108,23 @@ with tempfile.TemporaryDirectory() as directory:
                 make_pdf(opposite, orientation, sizes, effect=effect,
                          motion="O" if motion == "I" else "I")
                 assert middle != capture(opposite, .5), "inward/outward direction ignored"
+            if wipe:
+                from PIL import Image
+                from io import BytesIO
+                # Pixels safely behind/ahead of the blade must be exact page
+                # pixels, including the independent letterboxes in mixed ratios.
+                before = Image.open(BytesIO(start))
+                after = Image.open(BytesIO(end))
+                wiped = Image.open(BytesIO(middle))
+                w,h = wiped.size
+                if angle in (0,180):
+                    low,high = (0,0,w*2//5,h),(w*3//5,0,w,h)
+                else:
+                    low,high = (0,0,w,h*2//5),(0,h*3//5,w,h)
+                revealed,covered = (low,high) if angle in (0,270) else (high,low)
+                assert wiped.crop(revealed).tobytes() == after.crop(revealed).tobytes()
+                assert wiped.crop(covered).tobytes() == before.crop(covered).tobytes()
+                assert capture(first) == start, "wiper leaked GL state into a static frame"
             quarter, three_quarters = capture(deck, .25), capture(deck, .75)
             assert len({start, quarter, middle, three_quarters, end}) == 5, "cascade stalled"
             if not dissolve:
@@ -114,7 +132,7 @@ with tempfile.TemporaryDirectory() as directory:
                 if glitter:
                     make_pdf(changed, orientation, sizes, effect=effect,
                              angle={0: 270, 270: 315, 315: 0}[angle])
-                elif flip or fly or push:
+                elif flip or fly or push or wipe:
                     make_pdf(changed, orientation, sizes, effect=effect, motion=motion,
                              angle=(angle+180)%360)
                 else:
