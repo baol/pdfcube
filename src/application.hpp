@@ -4,6 +4,7 @@
 #include "options.hpp"
 #include "renderer.hpp"
 #include "zoom.hpp"
+#include "performance.hpp"
 
 #include <gtk/gtk.h>
 
@@ -70,14 +71,6 @@ class Application {
   bool reload_renderer_{false};
   bool snapshot_written_{false};
   std::string startup_error_;
-  struct FrameTiming {
-    gint64 frame_time_us;
-    gint64 frame_interval_us;
-    gint64 cpu_submit_us;
-    int transition;
-    double progress;
-    bool preparing;
-  };
   std::vector<FrameTiming> frame_timings_;
   gint64 previous_animation_frame_us_{0};
 };
