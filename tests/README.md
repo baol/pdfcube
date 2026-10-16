@@ -54,3 +54,10 @@ gallery** workflow. Select the branch under Actions → Run workflow, then downl
 the commit-labelled `transition-review` artifact for visual inspection. It is
 not a required pre-submit check. Local generation remains available through
 `tools/transition_gallery.py`.
+
+The web-recording integration case is an exceptional sub-second test: one shared
+surfaceless context renders a fixed-step cycle, followed by real H.264 encoding
+and decoding. It retains dwell/transition frame counts, endpoint, orientation,
+codec, dimensions, faststart, and parser-guard checks. On the local runner it
+takes about 0.6 seconds; report its 500 ms SLO miss rather than dropping checks.
+Publication/README replacement tests mock remote calls and remain below 500 ms.

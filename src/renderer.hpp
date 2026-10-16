@@ -54,6 +54,7 @@ class Renderer {
   void initialize();
   void release();
   void render(int width, int height, const FrameState& frame);
+  std::vector<unsigned char> read_rgb(int width, int height) const;
   void write_png(const std::string& filename, int width, int height) const;
   [[nodiscard]] bool idle_preparation_pending() const;
 

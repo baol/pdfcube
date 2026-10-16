@@ -1,0 +1,127 @@
+name: Showcase video
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, record-demo]
+    paths:
+      - 'src/**'
+      - 'examples/showcase/**'
+      - 'tools/record_showcase.py'
+      - 'tools/publish_showcase.py'
+      - 'tools/verify_showcase_video.py'
+      - 'meson.build'
+      - 'meson.options'
+      - '.github/workflows/showcase-video.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: showcase-video-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  record:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install build and recording dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build python3 \
+            xvfb xauth ffmpeg libgl1-mesa-dri libgtk-4-dev libepoxy-dev \
+            libpoppler-glib-dev libcairo2-dev libboost-program-options-dev \
+            texlive-latex-recommended texlive-pictures
+      - name: Build application and showcase
+        run: |
+          meson setup build --buildtype=release -Dwerror=true
+          meson compile -C build
+          meson compile -C build doc
+      - name: Record compressed video
+        run: |
+          python3 tools/record_showcase.py build/src/pdfcube \
+            build/examples/showcase/showcase.pdf build/showcase.mp4 --fps 30 --crf 28
+          # Attachments must fit the free-plan limit. Keep fps/resolution intact.
+          if test "$(stat -c %s build/showcase.mp4)" -ge 9500000; then
+            ffmpeg -nostdin -v error -i build/showcase.mp4 -an -c:v libx264 \
+              -preset slow -b:v 210k -pass 1 -passlogfile build/video-pass -f null /dev/null
+            ffmpeg -nostdin -v error -i build/showcase.mp4 -an -c:v libx264 \
+              -preset slow -b:v 210k -pass 2 -passlogfile build/video-pass \
+              -pix_fmt yuv420p -movflags +faststart build/showcase-small.mp4
+            mv build/showcase-small.mp4 build/showcase.mp4
+          fi
+          python3 tools/verify_showcase_video.py build/showcase.mp4
+          printf '%s\n' "$GITHUB_SHA" > build/source-commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: showcase-video
+          path: |
+            build/showcase.mp4
+            build/source-commit.txt
+          if-no-files-found: error
+
+  publish:
+    needs: record
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check upload credential
+        env:
+          MEDIA_TOKEN: ${{ secrets.DEMO_MEDIA_TOKEN }}
+        run: |
+          if test -z "$MEDIA_TOKEN"; then
+            echo '::error::Set DEMO_MEDIA_TOKEN to a user token with Contents and Issues write access to this repository. GITHUB_TOKEN cannot upload attachments.'
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: showcase-video
+          path: video
+      - name: Require attachment-capable GitHub CLI
+        run: |
+          # Runner CLI packages can lag behind the attachment feature (gh 2.99+).
+          if ! gh issue edit --help | grep -q -- --attach; then
+            curl --fail --location --silent --show-error \
+              https://github.com/cli/cli/releases/download/v2.99.0/gh_2.99.0_linux_amd64.deb \
+              -o /tmp/gh_2.99.0_linux_amd64.deb
+            curl --fail --location --silent --show-error \
+              https://github.com/cli/cli/releases/download/v2.99.0/gh_2.99.0_checksums.txt \
+              -o /tmp/gh_2.99.0_checksums.txt
+            (cd /tmp && sha256sum --check --ignore-missing gh_2.99.0_checksums.txt)
+            sudo dpkg -i /tmp/gh_2.99.0_linux_amd64.deb
+          fi
+          gh issue edit --help | grep -q -- --attach
+      - name: Publish attachment and update README
+        env:
+          GH_TOKEN: ${{ secrets.DEMO_MEDIA_TOKEN }}
+        run: |
+          source_commit="$(cat video/source-commit.txt)"
+          test "$(git rev-parse HEAD)" = "$source_commit" || {
+            echo '::error::Source changed while recording; rerun against current master.'
+            exit 1
+          }
+          python3 tools/publish_showcase.py video/showcase.mp4 \
+            --repo "$GITHUB_REPOSITORY" --revision "$source_commit"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          git commit -m 'docs: refresh showcase video [skip ci]'
+          git fetch origin master
+          test "$(git rev-parse origin/master)" = "$source_commit" || {
+            echo '::error::Source changed during upload; refusing a stale README update.'
+            exit 1
+          }
+          git rebase origin/master
+          git push origin HEAD:master

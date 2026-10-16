@@ -733,6 +733,25 @@ void Renderer::render(int width, int height, const FrameState& frame) {
   draw_color(top_, other_side.value.data());
 }
 
+std::vector<unsigned char> Renderer::read_rgb(int width, int height) const {
+  const std::size_t stride = static_cast<std::size_t>(width) * 3;
+  std::vector<unsigned char> pixels(static_cast<std::size_t>(width) * height * 4);
+  std::vector<unsigned char> flipped(stride * height);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  // RGBA readback works on both desktop OpenGL and GLES (RGB is not
+  // universally supported by GLES framebuffer implementations).
+  glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+  if (glGetError() != GL_NO_ERROR)
+    throw std::runtime_error("Recording framebuffer readback failed");
+  for (int row = 0; row < height; ++row) {
+    const auto* source = pixels.data() + static_cast<std::size_t>(height - row - 1) * width * 4;
+    auto* destination = flipped.data() + row * stride;
+    for (int column = 0; column < width; ++column)
+      std::copy_n(source + column * 4, 3, destination + column * 3);
+  }
+  return flipped;
+}
+
 void Renderer::write_png(const std::string& filename, int width, int height) const {
   std::vector<unsigned char> pixels(static_cast<std::size_t>(width * height * 4));
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
