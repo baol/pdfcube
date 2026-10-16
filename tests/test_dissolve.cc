@@ -159,6 +159,7 @@ int main() {
   }
 
   previous = early;
+  std::vector<float> first_step(shards.size()), last_step(shards.size()), last_gain(shards.size());
   int visible_25 = 0, visible_50 = 0;
   for (int step = 11; step <= 100; ++step) {
     Frame current, repeated;
@@ -168,12 +169,22 @@ int main() {
     for (std::size_t i = 0; i < shards.size(); ++i) {
       const auto unique = corners(current,i);
       const auto c = screen_center(unique), p = screen_center(corners(previous,i));
-      const auto e = screen_center(corners(early,i)), l = screen_center(corners(later,i));
-      // Equal progress intervals mean equal screen displacement for the
-      // whole flight, including the final approach to the viewport edge.
-      assert(std::abs((c[0]-p[0]) - (l[0]-e[0])/10) < .00001F);
-      assert(std::abs((c[1]-p[1]) - (l[1]-e[1])/10) < .00001F);
-      assert(std::abs((c[2]-p[2]) - (l[2]-e[2])/10) < .00001F);
+      // A small, uniform acceleration throughout flight: no slow-down or
+      // sudden late boost. Total speed gain must remain below twenty percent.
+      const float displacement = std::hypot(c[0]-p[0],c[1]-p[1]);
+      if (step == 11) first_step[i] = displacement;
+      if (step >= 12) {
+        const float gain = displacement-last_step[i];
+        assert(gain > 0);
+        // Third differences amplify float rounding in projected centroids.
+        if (step >= 13) assert(std::abs(gain-last_gain[i]) < .00001F);
+        last_gain[i] = gain;
+      }
+      if (step == 100) {
+        assert(displacement > first_step[i]*1.10F);
+        assert(displacement < first_step[i]*1.20F);
+      }
+      last_step[i] = displacement;
       assert(c[2] > p[2]);
       assert((c[0]-p[0])*shards[i].direction_x + (c[1]-p[1])*shards[i].direction_y > 0);
       // All pairwise distances, including both polygon diagonals, are rigid.
@@ -207,6 +218,18 @@ int main() {
   }
   // Pieces leave at different times, rather than clearing in one final sweep.
   assert(visible_25 > visible_50 && visible_50 > 0);
+
+  // The launch itself retains its previous speed; acceleration grows from
+  // there rather than replacing the initial impulse with an ease-in.
+  Frame launch_a, launch_b;
+  pdfcube::update_glass_shard_vertices(.001,launch_a);
+  pdfcube::update_glass_shard_vertices(.002,launch_b);
+  for (std::size_t i = 0; i < shards.size(); ++i) {
+    const auto a = screen_center(corners(launch_a,i));
+    const auto b = screen_center(corners(launch_b,i));
+    const float speed = std::hypot(b[0]-a[0],b[1]-a[1])/.001F;
+    assert(std::abs(speed-shards[i].speed) < shards[i].speed*.002F);
+  }
 
   // Optional wafer geometry has two textured faces joined by a pale rim.
   // The front/back separation remains fixed while each whole piece tumbles.

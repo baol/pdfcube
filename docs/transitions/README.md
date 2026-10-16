@@ -178,10 +178,10 @@ when the GPU draws its triangle fan.
 The impact cuts directly from the intact page to separated, tilted fragments;
 there is no slow crack-opening stage. The blow is strongest at the center,
 with a modest outward-speed taper and a stronger forward impulse toward the
-viewer. Each piece keeps its launch speed throughout flight. Perspective is
-compensated at the pivot to keep outward screen speed constant. Every piece is
-completely outside the viewport by 99%, without a late sweep, acceleration,
-shrink, or fade.
+viewer. Each piece retains its launch speed and then accelerates gently and
+continuously, reaching 15% more speed by the end. Perspective is compensated
+at the pivot so it does not add an unintended speed ramp. Every piece is
+completely outside the viewport by 99%, without a late sweep, shrink, or fade.
 
 Each piece keeps a fixed tumbling axis tangent to its flight direction and a
 constant individual angular velocity. Distinct angular speeds avoid a

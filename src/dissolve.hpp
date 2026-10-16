@@ -182,6 +182,9 @@ inline std::size_t glass_shard_vertex_count(bool experimental = false) {
 inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex>& result,
                                        bool experimental = false) {
   const float position = std::clamp(static_cast<float>(progress), 0.0F, 1.0F);
+  // Preserve the launch velocity, then increase it continuously by 15% over
+  // the flight. There is no delayed ramp or change to angular momentum.
+  const float flight = position + .075F * position * position;
   result.clear();
   const auto& shards = glass_shards();
   result.reserve(glass_shard_vertex_count(experimental));
@@ -196,7 +199,7 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float axis_y = shard.tilt_y / angular_speed;
     const float axis_z = shard.spin / angular_speed;
     // The impact is a cut from the intact panel to separated, tilted pieces.
-    // After that first broken pose, both translation and rotation are linear.
+    // After that first broken pose, rotation keeps its fixed angular speed.
     const float angle = position == 0 ? 0 : shard.impact_angle + angular_speed * position;
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
@@ -205,10 +208,10 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float light = .58F + .42F * std::abs(normal_z) +
                         .10F * std::pow(std::sin(2 * angle), 8.0F);
     const float impact = position == 0 ? 0 : .12F * std::hypot(center[0], center[1]);
-    const float travel = impact + shard.speed * position;
-    const float depth = shard.forward_speed * position;
+    const float travel = impact + shard.speed * flight;
+    const float depth = shard.forward_speed * flight;
     // The central blow sends glass toward the viewer. Compensate the pivot's
-    // perspective magnification so its visible outward velocity stays fixed;
+    // perspective magnification so its visible outward acceleration stays mild;
     // the rigid splinter itself still grows naturally as it approaches.
     const float inverse_projection = 1 - depth / 4;
     const auto rotate = [&](float local_x, float local_y, float local_z) {
