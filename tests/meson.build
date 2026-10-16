@@ -58,11 +58,10 @@ test(
   args: [files('fixture-wide.pdf')],
 )
 
-test(
-  'command-line compatibility',
-  python,
-  args: [files('test_cli.py'), pdfcube_exe, meson.project_version()],
-)
+options_test = executable('options-test', files('test_options.cc', '../src/options.cc'),
+                          dependencies: [boost],
+                          include_directories: include_directories('..', '../src'))
+test('command-line compatibility', options_test)
 
 xvfb_run = find_program('xvfb-run', required: false)
 transition_metadata_test = executable(

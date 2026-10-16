@@ -39,6 +39,8 @@ for arguments in (
     ("-n", "--help"),
     ("--experimental", "--help"),
     ("--experimental=false", "--help"),
+    ("--experimental", "unused.pdf", "--help"),
+    ("--experimental=false", "unused.pdf", "--help"),
 ):
     short_option = run(*arguments)
     assert short_option.returncode == 0, (arguments, short_option.stderr)
