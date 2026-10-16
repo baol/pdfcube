@@ -37,12 +37,18 @@ sudo apt install g++ meson ninja-build pkg-config \
   libboost-program-options-dev
 ```
 
-The test suite additionally uses Python 3, Xvfb, Xauth, and Mesa's software
-OpenGL driver. Install them with:
+The fast test suite additionally uses Python 3, Pillow, EGL development headers,
+and Mesa's software OpenGL driver. Install them with:
 
 ```sh
-sudo apt install python3 xvfb xauth libgl1-mesa-dri
+sudo apt install python3 python3-pil libegl-dev libgl1-mesa-dri fonts-dejavu-core
 ```
+
+Frame tests render explicit progress values in one headless context per case;
+they do not wait through animation durations. Ordinary tests have a 500 ms
+budget, with a 1-second allowance for cold graphics setup. See
+[the test contract](tests/README.md). The optional review gallery additionally
+requires Xvfb, Xauth, and ffmpeg.
 
 On macOS with Homebrew:
 

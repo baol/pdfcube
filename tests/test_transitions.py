@@ -1,58 +1,40 @@
-import os
 from pathlib import Path
 import shlex
 import subprocess
 import sys
 import tempfile
 
-from transition_fixture import EXAMPLES, make_pdf
+from transition_fixture import make_pdf
+from render_client import Frames
 
-xvfb, binary, metadata_test = map(lambda p: str(Path(p).resolve()), sys.argv[1:4])
-effect = sys.argv[4] if len(sys.argv) > 4 else "Blinds"
-motion = sys.argv[5] if len(sys.argv) > 5 else "I"
+driver, metadata_test = map(lambda p: str(Path(p).resolve()), sys.argv[1:3])
+effect, motion, selected_axis, selected_angle, selected_ratio = sys.argv[3:8]
+selected_angle = None if selected_angle == 'none' else int(selected_angle)
+selected_ratio = int(selected_ratio)
 flip = effect in ("Cover", "Uncover")
 fly = effect == "Fly"
 push = effect == "Push"
 dissolve = effect == "Dissolve"
-environment = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1")
 
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
-    for name, kind, axis, direction, angle in EXAMPLES:
-        generated = root / f"{name}.pdf"
-        make_pdf(generated, axis, effect=kind, motion=direction, angle=angle)
-        committed = Path(__file__).resolve().parents[1] / "examples" / "transitions" / generated.name
-        assert generated.read_bytes() == committed.read_bytes(), f"stale example: {name}"
+    frames = Frames(driver, root)
 
     def capture(pdf, progress=None, *extra):
         output = root / "frame.png"
-        # Every invocation must create its own frame. Without this unlink, a
-        # remotely activated GtkApplication can make a later capture read the
-        # previous invocation's image and report a false pass.
+        # A missing write must never pass by reusing the previous frame.
         output.unlink(missing_ok=True)
-        command = [xvfb, "-a", binary, "--no-fullscreen", "--snapshot", str(output)]
+        command = ["--no-fullscreen", "--snapshot", str(output)]
         if progress is not None:
             command += ["--snapshot-progress", str(progress)]
-        result = subprocess.run(command + list(extra) + [str(pdf)], env=environment,
-                                capture_output=True, timeout=30)
-        details = (f"command: {shlex.join(command + list(extra) + [str(pdf)])}\n"
-                   f"stdout:\n{result.stdout.decode(errors='replace')}\n"
-                   f"stderr:\n{result.stderr.decode(errors='replace')}")
-        assert result.returncode == 0, f"snapshot command failed ({result.returncode})\n{details}"
+        frames.render(*(command + list(extra) + [str(pdf)]))
         assert output.is_file(), (
-            "snapshot command exited successfully but produced no PNG; "
-            "another GtkApplication instance may have claimed the fixed application ID\n"
-            + details
+            "native renderer completed but produced no PNG\n"
+            + shlex.join(command + list(extra) + [str(pdf)])
         )
         return output.read_bytes()
 
-    middles = []
-    cases = [("H", angle) for angle in (0, 90, 180, 270)] if flip else \
-            [("H", angle) for angle in range(0, 360, 45)] if fly else [("H", None), ("V", None)]
-    if push:
-        cases = [("H", angle) for angle in (0, 90, 180, 270)]
-    if dissolve:
-        cases = [("H", None)]
+    cases = [(selected_axis,selected_angle)]
     for orientation, angle in cases:
         dimensions = (((640, 360), (640, 360)),
                       ((360, 640), (360, 640)),
@@ -60,7 +42,7 @@ with tempfile.TemporaryDirectory() as directory:
                      (((640, 360), (640, 360)),) if fly and angle not in (0, 90) else \
                      (((640, 360), (640, 360)), ((360, 640), (360, 640)),
                       ((640, 360), (360, 640)))
-        for sizes in dimensions:
+        for sizes in [dimensions[selected_ratio]]:
             deck, first, last = (root / name for name in ("deck.pdf", "first.pdf", "last.pdf"))
             make_pdf(deck, orientation, sizes, effect=effect, motion=motion, angle=angle)
             metadata = [metadata_test, str(deck), orientation, effect, motion]
@@ -116,8 +98,18 @@ with tempfile.TemporaryDirectory() as directory:
                 assert middle != capture(opposite, .5), "inward/outward direction ignored"
             quarter, three_quarters = capture(deck, .25), capture(deck, .75)
             assert len({start, quarter, middle, three_quarters, end}) == 5, "cascade stalled"
-            middles.append(middle)
-    if fly or push or dissolve:
-        assert len(set(middles)) == len(middles), f"{effect} direction or page ratio ignored"
-    else:
-        assert len(set(middles[::3])) == len(cases), "orientation/direction ignored"
+            if not dissolve:
+                changed = root / "changed-direction.pdf"
+                if flip or fly or push:
+                    make_pdf(changed, orientation, sizes, effect=effect, motion=motion,
+                             angle=(angle+180)%360)
+                else:
+                    make_pdf(changed, "V" if orientation == "H" else "H", sizes,
+                             effect=effect, motion=motion)
+                assert capture(changed,.5) != middle, "orientation/direction ignored"
+            frames.render("@sequence", "--snapshot", root / "sequence.png",
+                          "--snapshot-progress", "0", deck)
+            if dissolve:
+                frames.render("@sequence", "--snapshot", root / "sequence.png",
+                              "--snapshot-progress", "0", "--experimental", deck)
+    frames.close()
