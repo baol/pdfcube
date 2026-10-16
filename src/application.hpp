@@ -40,6 +40,7 @@ class Application {
   void reset_zoom();
   void schedule_auto_advance(bool allow_immediate = false);
   void write_performance_log() const;
+  void record_video(int width, int height);
   FrameState frame_state() const;
   bool handle_key(guint keyval, GdkModifierType state);
   double animation_progress() const;

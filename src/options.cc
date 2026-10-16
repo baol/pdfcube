@@ -75,6 +75,10 @@ ParseResult parse_options(int argc, char** argv) {
   po::options_description hidden("Hidden options");
   hidden.add_options()
       ("input-file,i", po::value<std::string>(), "PDF file")
+      ("record-raw", po::value<std::string>(), "Export one presentation cycle as RGB24 frames")
+      ("record-fps", po::value<int>(), "Export frame rate")
+      ("record-width", po::value<int>(), "Export width")
+      ("record-height", po::value<int>(), "Export height")
       ("snapshot", po::value<std::string>(), "Write one PNG frame and exit")
       ("snapshot-progress", po::value<double>(),
        "Transition progress used by --snapshot");
@@ -155,6 +159,23 @@ ParseResult parse_options(int argc, char** argv) {
     if (const auto* selected = value("input-file")) {
       result.options.input_file = selected->as<std::string>();
     }
+    if (const auto* selected = value("record-raw")) {
+      result.options.record_raw = selected->as<std::string>();
+      result.options.fullscreen = false;
+      result.options.demo = false;
+      if (result.options.input_file.empty() || !result.options.program.empty())
+        throw std::invalid_argument("recording requires a PDF and no transition program");
+    }
+    for (const auto& entry : std::vector<std::pair<const char*, int*>>{
+             {"record-fps", &result.options.record_fps},
+             {"record-width", &result.options.record_width},
+             {"record-height", &result.options.record_height}}) {
+      if (const auto* selected = value(entry.first)) *entry.second = selected->as<int>();
+      if (*entry.second < 1 || *entry.second > 8192)
+        throw std::invalid_argument("recording dimensions and rate must be in 1..8192");
+    }
+    if (!result.options.record_raw.empty() && value("snapshot"))
+      throw std::invalid_argument("recording and snapshot are mutually exclusive");
     if (const auto* selected = value("snapshot")) {
       result.options.snapshot = selected->as<std::string>();
     }

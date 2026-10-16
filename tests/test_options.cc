@@ -66,6 +66,14 @@ int main() {
     assert(invalid.should_exit && invalid.exit_code == 2);
     assert(invalid.output.find("Command line option parsing error") != std::string::npos);
   }
+  for (const auto& invalid : {parse({"--record-raw","out.rgb"}),
+      parse({"--record-raw","out.rgb","--snapshot","out.png","deck.pdf"}),
+      parse({"--record-fps","0"}),parse({"--record-width","-1"})}) {
+    assert(invalid.should_exit && invalid.exit_code == 2);
+  }
+  const auto recording = parse({"--record-raw","out.rgb","--demo","deck.pdf"});
+  assert(!recording.should_exit && !recording.options.demo && !recording.options.fullscreen);
+  assert(recording.options.input_file == "deck.pdf" && recording.options.record_fps == 30);
   std::ofstream(root/".pdfcuberc") << "bgcolor=0.1:0.2:0.3\nno-fullscreen=true\nexperimental=true\n";
   const auto configured = parse({"deck.pdf"});
   assert(!configured.should_exit && configured.options.experimental && !configured.options.fullscreen);

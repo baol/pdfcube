@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "recording.hpp"
 #include "navigation.hpp"
 #include "playback.hpp"
 #include "timing.hpp"
@@ -62,7 +63,9 @@ void Application::activate_callback(GtkApplication* application, gpointer data) 
 void Application::activate(GtkApplication* application) {
   window_ = gtk_application_window_new(application);
   gtk_window_set_title(GTK_WINDOW(window_), "PDFCube");
-  gtk_window_set_default_size(GTK_WINDOW(window_), 960, 720);
+  gtk_window_set_default_size(GTK_WINDOW(window_),
+      options_.record_raw.empty() ? 960 : options_.record_width,
+      options_.record_raw.empty() ? 720 : options_.record_height);
 
   area_ = gtk_gl_area_new();
   gtk_gl_area_set_allowed_apis(
@@ -200,6 +203,12 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
     const int scale = gtk_widget_get_scale_factor(GTK_WIDGET(area));
     const int width = gtk_widget_get_width(GTK_WIDGET(area)) * scale;
     const int height = gtk_widget_get_height(GTK_WIDGET(area)) * scale;
+    if (!self->options_.record_raw.empty() && !self->snapshot_written_) {
+      self->snapshot_written_ = true;
+      self->record_video(width, height);
+      g_application_quit(G_APPLICATION(self->application_));
+      return TRUE;
+    }
     if (GdkFrameClock* clock = gtk_widget_get_frame_clock(GTK_WIDGET(area))) {
       self->frame_time_us_ = gdk_frame_clock_get_frame_time(clock);
     }
@@ -238,6 +247,22 @@ gboolean Application::render_callback(GtkGLArea* area, GdkGLContext* context, gp
     g_application_quit(G_APPLICATION(self->application_));
   }
   return TRUE;
+}
+
+void Application::record_video(int width, int height) {
+  if (width != options_.record_width || height != options_.record_height)
+    throw std::runtime_error("Recording size differs from requested size; use GDK_SCALE=1");
+  std::ofstream output(options_.record_raw, std::ios::binary);
+  if (!output) throw std::runtime_error("Cannot open raw recording output");
+  record_presentation(*document_, *renderer_, options_.record_fps, width, height,
+      [&](const std::vector<unsigned char>& pixels, int repeats) {
+        for (int frame = 0; frame < repeats; ++frame) {
+          output.write(reinterpret_cast<const char*>(pixels.data()), pixels.size());
+          if (!output) throw std::runtime_error("Cannot write recording frame");
+        }
+      });
+  output.flush();
+  if (!output) throw std::runtime_error("Cannot finish recording output");
 }
 
 void Application::write_performance_log() const {

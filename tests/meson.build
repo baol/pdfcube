@@ -117,3 +117,16 @@ if host_machine.system() == 'linux'
     timeout: test_watchdog, is_parallel: false, suite: ['render'], env: render_environment)
 endif
 
+ffmpeg = find_program('ffmpeg', required: false)
+ffprobe = find_program('ffprobe', required: false)
+if host_machine.system() == 'linux' and ffmpeg.found() and ffprobe.found()
+  test('web recording', python,
+    args: [files('test_recording.py'), render_driver,
+           files('../tools/record_showcase.py')],
+    timeout: test_watchdog, is_parallel: false, env: render_environment,
+  )
+endif
+
+test('showcase publication', python,
+  args: [files('test_publish_showcase.py'), files('../tools/publish_showcase.py')],
+)

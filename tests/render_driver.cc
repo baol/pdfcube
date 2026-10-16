@@ -1,4 +1,5 @@
 #include "options.hpp"
+#include "recording.hpp"
 #include "playback.hpp"
 #include "renderer.hpp"
 #include "performance.hpp"
@@ -106,7 +107,16 @@ int main() {
           if (frame.transition == pdfcube::Transition::switch_page && frame.progress <= 0)
             frame.transition = pdfcube::Transition::none;
         }
-        if (sequence) {
+        if (!options.record_raw.empty()) {
+          std::ofstream output(options.record_raw, std::ios::binary);
+          pdfcube::record_presentation(pages->document, pages->renderer, options.record_fps,
+              options.record_width, options.record_height,
+              [&](const std::vector<unsigned char>& pixels, int repeats) {
+                for (int i=0; i<repeats; ++i)
+                  output.write(reinterpret_cast<const char*>(pixels.data()),pixels.size());
+              });
+          if (!output) throw std::runtime_error("recording output failed");
+        } else if (sequence) {
           // Render every frame of a 60 Hz second directly, without PNG encoding
           // or advancing a wall clock. Readback catches deferred GL failures.
           std::vector<unsigned char> pixels(320*240*4);

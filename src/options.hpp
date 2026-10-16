@@ -21,6 +21,10 @@ struct Options {
   std::string program;
   std::string performance_log;
   std::string input_file;
+  std::string record_raw;
+  int record_fps{30};
+  int record_width{1280};
+  int record_height{720};
   std::string snapshot;
   double snapshot_progress{0.0};
   bool snapshot_transition{false};
