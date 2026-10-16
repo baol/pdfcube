@@ -40,9 +40,14 @@ playback_test = executable('playback-test', files('test_playback.cc'),
 test('PDF and program playback dispatch', python,
      args: [files('test_budget.py'), '0.45', playback_test], timeout: 1)
 isolation_test = executable('snapshot-isolation-test', files('test_snapshot_isolation.cc'),
-  dependencies: [gio], include_directories: include_directories('../src'))
+  dependencies: [gio, dependency('threads')], include_directories: include_directories('../src'))
+isolation_command = [isolation_test]
+if host_machine.system() == 'linux'
+  session_bus = find_program('dbus-run-session')
+  isolation_command = [session_bus.full_path(), '--', isolation_test]
+endif
 test('snapshot registration isolation', python,
-     args: [files('test_budget.py'), '0.45', isolation_test], timeout: 1)
+     args: [files('test_budget.py'), '0.45'] + isolation_command, timeout: 1)
 
 if host_machine.system() == 'linux'
   egl = dependency('egl')

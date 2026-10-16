@@ -23,7 +23,10 @@ the backend, including cancellation and idle dispatch. They never sleep.
 Parser tests call the actual parser in-process. Every boolean switch is tested
 immediately before a PDF filename, with explicit false and with filenames after
 the literal `--` delimiter. Snapshot isolation registers two real GApplications
-with the same ID and verifies that both remain local, without launching windows.
+in separate processes with the same ID and verifies both remain local while
+alive concurrently, without launching windows. Linux runs this against a private
+session bus (`dbus-run-session`), not just GLib's no-bus fallback. Readiness and
+shutdown use pipe messages, not sleeps.
 
 The optional gallery still launches the full GUI to produce review videos; it
 is a review-artifact build step, not a timing/animation test.

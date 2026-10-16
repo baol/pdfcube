@@ -8,6 +8,7 @@ Build-Depends:
  ninja-build,
  python3,
  python3-pil,
+ dbus-daemon,
  fonts-dejavu-core,
  texlive-latex-recommended,
  texlive-pictures,
