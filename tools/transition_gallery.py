@@ -19,9 +19,7 @@ parser.add_argument("output", type=Path)
 parser.add_argument("--frames", type=int, default=33)
 parser.add_argument("--jobs", type=int, default=min(4, os.cpu_count() or 1),
                     help="Number of snapshots to capture concurrently (default: up to 4)")
-parser.add_argument("--update-docs", action="store_true",
-                    help="Refresh the checked-in contact sheets from these captures")
-parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover", "Fly", "Push", "Dissolve", "Glitter", "Wipe"),
+parser.add_argument("--effects", nargs="+", choices=("Blinds", "Split", "Cover", "Uncover", "Fly", "Push", "Dissolve", "Glitter", "Wipe", "Fade"),
                     help="Capture only selected effects (default: all)")
 parser.add_argument("--inside-xvfb", action="store_true", help=argparse.SUPPRESS)
 args = parser.parse_args()
@@ -48,11 +46,20 @@ args.output.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, GDK_BACKEND="x11", LIBGL_ALWAYS_SOFTWARE="1",
            GTK_A11Y="none")
 examples = [entry for entry in EXAMPLES if not args.effects or entry[1] in args.effects]
+# Fade uses the same capture pipeline for colored, light, and dark slides.
+if any(entry[1] == "Fade" for entry in examples):
+    examples += [("fade-light", "Fade", "H", "I", None),
+                 ("fade-dark", "Fade", "H", "I", None)]
+palettes = {
+    "fade-light": dict(colors=("0.98 0.98 0.98", "0.94 0.96 1"), ink="0.15 0.15 0.15"),
+    "fade-dark": dict(colors=("0.015 0.025 0.06", "0.1 0.025 0.015")),
+}
 for name, effect, orientation, motion, angle in examples:
     folder = args.output / name
     folder.mkdir(exist_ok=True)
     pdf = folder / "fixture.pdf"
-    make_pdf(pdf, orientation, effect=effect, motion=motion, angle=angle)
+    make_pdf(pdf, orientation, effect=effect, motion=motion, angle=angle,
+             **palettes.get(name, {}))
     for old_frame in folder.glob("frame-*.png"):
         old_frame.unlink()
 
@@ -72,8 +79,6 @@ for name, effect, orientation, motion, angle in examples:
             sheet.paste(image, (column * 480, 25))
         ImageDraw.Draw(sheet).text((column * 480 + 8, 6), f"{frame / (args.frames - 1):.0%}", fill="white")
     sheet.save(folder / "contact-sheet.png")
-    if args.update_docs:
-        sheet.save(Path(__file__).resolve().parents[1] / "docs" / "transitions" / f"{name}.png")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate",
                     str((args.frames - 1) / 1.25), "-i", str(folder / "frame-%03d.png"),
                     "-vf", "tpad=start_duration=0.5:start_mode=clone:stop_duration=0.5:stop_mode=clone",
@@ -85,12 +90,12 @@ revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).stri
     "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"])),
     "frames": args.frames, "backend": "X11",
     "examples": [entry[0] for entry in examples],
-    "renderer": "LIBGL_ALWAYS_SOFTWARE=1", "status": "candidate, not approved",
+    "renderer": "LIBGL_ALWAYS_SOFTWARE=1",
     "binary_version": subprocess.check_output([str(args.binary.resolve()), "--version"], text=True).strip(),
 }, indent=2) + "\n")
 (args.output / "index.html").write_text(
-    "<!doctype html><meta charset=utf-8><title>Transition review</title>"
-    "<h1>Transitions — candidates</h1>" + "".join(
+    "<!doctype html><meta charset=utf-8><title>Transition gallery</title>"
+    "<h1>Transition gallery</h1>" + "".join(
         f"<h2>{name}</h2><video controls loop muted width=720 src='{name}/transition.mp4'></video>"
         f"<p><a href='{name}/fixture.pdf'>Fixture PDF</a></p>"
         f"<img width=1200 src='{name}/contact-sheet.png'>"

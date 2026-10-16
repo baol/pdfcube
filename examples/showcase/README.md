@@ -19,24 +19,20 @@ meson compile -C build doc
 ```
 
 The explicit `doc` target runs pdfLaTeX twice and writes
-`build/examples/showcase/showcase.pdf`. It is always defined and is excluded from the
-default application build. Invoking it without pdfLaTeX or the required TeX
-packages fails; documentation is never silently skipped. CI runs this same
-target and uploads the PDF as the `beamer-showcase` artifact.
+`build/examples/showcase/showcase.pdf`. Build it explicitly with pdfLaTeX and the required TeX packages installed.
+CI runs this same target and uploads the PDF as the `beamer-showcase` artifact.
 
 For package installation, configure with `-Dinstall_docs=true`, build `doc`,
 then install normally. This installs `showcase.pdf`, `showcase.tex` and this
 README under `<prefix>/share/doc/pdfcube/examples/` (or the configured
-`datadir`). The option defaults to false and does not depend on installed tools.
-The target tracks source changes, so unchanged PDFs are not rebuilt.
+`datadir`). The option defaults to false. The target rebuilds the PDF when its source changes.
 
 Debian packages and AppImages include these files. GitHub releases also attach
 `pdfcube-VERSION-showcase.pdf`, covered by the release's `SHA256SUMS`.
 The source archive contains the editable source and build instructions.
 
-Use pdfLaTeX with the normal Beamer presentation mode. Do not enable
-`\DocumentMetadata`: this source uses Hyperref's classic PDF transition
-syntax, including explicit Fly scale and motion parameters.
+Use pdfLaTeX with the normal Beamer presentation mode and Hyperref's classic
+PDF transition syntax, including explicit Fly scale and motion parameters.
 
 ## Playback
 
@@ -93,9 +89,7 @@ MP4 output. Recording ignores interactive demo mode and requires no `--program`.
 - Dissolve, Glitter (right/down/lower right), Fade and Replace.
 
 Glitter and Wipe are animated in PDFCube. Glitter releases fading fragments and
-sparks; Wipe moves a raised blade in the requested direction. Fade currently
-falls back to an instant change; its slide says so and preserves the real PDF
-metadata for the planned implementation. Other viewers may implement them
+sparks; Wipe moves a raised blade in the requested direction. Fade blends the stationary slides in linear light with gently eased timing. Other viewers may implement them
 or ignore PDF transitions entirely. Replace is deliberately instant.
 
 PDF transitions are stored on the **destination** page. Each `\ShowSlide` call
