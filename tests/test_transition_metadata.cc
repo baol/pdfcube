@@ -12,6 +12,7 @@ int main(int argc, char** argv) {
   const bool fly = argc >= 5 && argv[3][0] == 'F';
   const bool push = argc >= 5 && argv[3][0] == 'P';
   const bool dissolve = argc >= 5 && argv[3][0] == 'D';
+  const bool wipe = argc >= 5 && argv[3][0] == 'W';
   const bool glitter = argc >= 5 && argv[3][0] == 'G';
   const auto type = split ? POPPLER_PAGE_TRANSITION_SPLIT :
                     cover ? POPPLER_PAGE_TRANSITION_COVER :
@@ -19,6 +20,7 @@ int main(int argc, char** argv) {
                     fly ? POPPLER_PAGE_TRANSITION_FLY :
                     push ? POPPLER_PAGE_TRANSITION_PUSH :
                     dissolve ? POPPLER_PAGE_TRANSITION_DISSOLVE :
+                    wipe ? POPPLER_PAGE_TRANSITION_WIPE :
                     glitter ? POPPLER_PAGE_TRANSITION_GLITTER : POPPLER_PAGE_TRANSITION_BLINDS;
   const bool success = page.transition_type == type &&
          (argc < 6 || page.angle == std::atoi(argv[5])) &&

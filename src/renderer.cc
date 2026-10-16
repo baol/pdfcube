@@ -8,6 +8,7 @@
 #include "push.hpp"
 #include "dissolve.hpp"
 #include "glitter.hpp"
+#include "wipe.hpp"
 
 #include <algorithm>
 #include <array>
@@ -553,6 +554,52 @@ void Renderer::render(int width, int height, const FrameState& frame) {
     if (frame.progress <= 0 || frame.progress >= 1) {
       draw_page(landed ? frame.next_page : frame.current_page,
                 texture_size, Matrix::identity().value.data());
+      return;
+    }
+    if (frame.transition == Transition::wipe) {
+      const auto wipe = wipe_geometry(frame.progress, frame.direction_degrees, width, height);
+      const auto draw_fitted = [&](int index) {
+        const auto& info = document_.page_info(index);
+        const auto fit = content_viewport(width, height, info.width / info.height);
+        glViewport(fit.x, fit.y, fit.width, fit.height);
+        draw_page(index, page_size(index), Matrix::identity().value.data());
+      };
+      glDisable(GL_DEPTH_TEST);
+      draw_fitted(frame.next_page);
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(wipe.outgoing.x, wipe.outgoing.y,
+                wipe.outgoing.width, wipe.outgoing.height);
+      // The outgoing letterbox is part of its image too. Clear the unrevealed
+      // region before drawing it, so a taller incoming page cannot leak through.
+      glClear(GL_COLOR_BUFFER_BIT);
+      draw_fitted(frame.current_page);
+      glDisable(GL_SCISSOR_TEST);
+
+      // A shallow squeegee rail, with dark rubber lip and a bright metal bevel.
+      // Its center covers the pixel-aligned reveal edge. Fixed geometry and
+      // closed-form travel keep memory bounded and replay exactly reproducible.
+      glViewport(0, 0, width, height);
+      const Matrix view = perspective(2 * std::atan(1 / flip_camera), 1, .5F, 10) *
+                          translate(0, 0, -flip_camera);
+      const Matrix rail = translate(wipe.horizontal ? wipe.center : 0,
+                                    wipe.horizontal ? 0 : wipe.center, 0) *
+                          rotate_z(wipe.horizontal ? 0 : pi / 2);
+      const float half = wipe.half_width;
+      constexpr float depth = .035F;
+      for (const float side : {-1.0F, 1.0F}) {
+        draw_color(Color{.11F,.14F,.17F,1},
+            (view * rail * translate(side * half,0,depth/2) *
+             rotate_y(side * pi/2) * scale(depth/2,1.08F,1)).value.data());
+      }
+      draw_color(Color{.14F,.17F,.20F,1},
+          (view * rail * translate(0,0,depth) * scale(half,1.08F,1)).value.data());
+      draw_color(Color{.43F,.48F,.53F,1},
+          (view * rail * translate(-half*.12F,0,depth) * scale(half*.58F,1.08F,1)).value.data());
+      draw_color(Color{.78F,.82F,.85F,1},
+          (view * rail * translate(-half*.67F,0,depth) * scale(half*.10F,1.08F,1)).value.data());
+      draw_color(Color{.035F,.045F,.055F,1},
+          (view * rail * translate(half*.78F,0,depth) * scale(half*.22F,1.08F,1)).value.data());
+      glEnable(GL_DEPTH_TEST);
       return;
     }
     if (frame.transition == Transition::push) {

@@ -3,6 +3,7 @@ python = import('python').find_installation('python3')
 test_watchdog = 10
 
 foreach item : [
+  ['physical wiper geometry', 'test_wipe.cc'],
   ['directional glitter geometry', 'test_glitter.cc'],
   ['deterministic glass fracture', 'test_dissolve.cc'],
   ['Fly leaf trajectory', 'test_fly.cc'],
@@ -74,7 +75,7 @@ if host_machine.system() == 'linux'
   render_environment.set('FONTCONFIG_FILE', meson.current_source_dir() / 'fonts.conf')
   render_environment.set('XDG_CACHE_HOME', meson.current_build_dir() / 'native-test-cache')
   # Every case targets 500 ms, including cold setup. Serialize to avoid GPU contention.
-  foreach effect : ['Blinds', 'Split', 'Cover', 'Uncover', 'Fly', 'Push', 'Dissolve', 'Glitter']
+  foreach effect : ['Blinds', 'Split', 'Cover', 'Uncover', 'Fly', 'Push', 'Dissolve', 'Glitter', 'Wipe']
     axes = ['H']
     angles = ['none']
     motions = ['I']
@@ -84,7 +85,7 @@ if host_machine.system() == 'linux'
     if effect == 'Split' or effect == 'Fly'
       motions = ['I', 'O']
     endif
-    if effect == 'Cover' or effect == 'Uncover' or effect == 'Push'
+    if effect == 'Cover' or effect == 'Uncover' or effect == 'Push' or effect == 'Wipe'
       angles = ['0', '90', '180', '270']
     elif effect == 'Fly'
       angles = ['0', '45', '90', '135', '180', '225', '270', '315']
@@ -112,6 +113,9 @@ if host_machine.system() == 'linux'
       endforeach
     endforeach
   endforeach
+  test('Wipe repeated playback memory', python,
+    args: [files('test_wipe_replay.py'), render_driver],
+    timeout: test_watchdog, is_parallel: false, suite: ['render'], env: render_environment)
   test('rendering compatibility', python,
     args: [files('test_render.py'), render_driver, files('fixture.pdf'), files('fixture-wide.pdf')],
     timeout: test_watchdog, is_parallel: false, suite: ['render'], env: render_environment)

@@ -23,6 +23,10 @@ Ready-to-open diagnostic slides:
 - Push: [right](push-right.pdf), [up](push-up.pdf),
   [left](push-left.pdf), [down](push-down.pdf)
 - [Dissolve](dissolve.pdf)
+- Glitter: [right](glitter-right.pdf), [down](glitter-down.pdf),
+  [lower right](glitter-down-right.pdf)
+- Wipe: [right](wipe-right.pdf), [up](wipe-up.pdf),
+  [left](wipe-left.pdf), [down](wipe-down.pdf)
 
 From the repository root:
 
@@ -56,6 +60,13 @@ python3 tests/transition_fixture.py examples/transitions
 
 The generator is the source of truth; do not edit the PDFs by hand.
 See the [review roadmap](../../docs/transitions/README.md) for videos and tests.
+## Wipe
+
+The four Wipe examples move a raised, beveled blade in the named PDF direction.
+The destination is revealed behind its rubber lip; the unrevealed part stays
+exactly on the outgoing page. Both pages retain their aspect ratios. Use the
+normal Space/Page Down playback or `--program 4:wipe`.
+
 ## Glitter
 
 `glitter-right.pdf`, `glitter-down.pdf` and `glitter-down-right.pdf` demonstrate
