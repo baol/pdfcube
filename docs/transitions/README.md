@@ -57,9 +57,31 @@ Replace already changes the page instantly.
 
 Local Wipe captures were inspected with GTK 4.22.4, Poppler 26.01 and software
 OpenGL, including a midpoint from the updated Beamer deck. All 26 Wipe cases
-pass with address/undefined-behavior sanitizers. In the refined-blade run, 13 sanitizer cases
-missed the 500 ms SLO (535–740 ms); this is recorded separately from
+pass with address/undefined-behavior sanitizers. In the optimized-blade run, 12 sanitizer cases
+missed the 500 ms SLO (519–661 ms); this is recorded separately from
 functional correctness and does not establish a hardware performance pass.
+
+### Wipe frame profiling
+
+A local 1920×1080 headless run on the RTX 3060, with `glFinish` after each
+frame, measured 180 frames at explicit progress values after 20 warmup frames.
+The debug build changed as follows; these measurements exclude the compositor:
+
+| Renderer | Median before → after | p95 before → after |
+| --- | --- | --- |
+| NVIDIA RTX 3060 | 0.65 → 0.52 ms | 0.83 → 0.80 ms |
+| llvmpipe software | 10.4 → 8.1 ms | 14.1 → 12.0 ms |
+
+The incoming page is now clipped to its revealed region, avoiding hidden-page
+fragment work. Lighting is evaluated once per quad rather than once per vertex;
+the optimized mesh microbenchmark improved from 0.092 to 0.055 ms per update.
+A second GPU comparison measured 0.68 → 0.63 ms median but 0.90 → 1.65 ms
+p95, so these samples do not establish a consistent GPU tail-latency improvement.
+Cold PDF rasterization/upload remains a separate cost (190–249 ms on the GPU
+runs); warmed frame throughput does not establish that first-frame latency is solved.
+The RSS replay check disables ASan's freed-block quarantine only for that check,
+so retained freed driver buffers do not masquerade as live memory growth. Other
+sanitizer frame cases retain their ordinary quarantine.
 
 ## Glitter: experimental, awaiting visual approval
 

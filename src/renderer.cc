@@ -579,8 +579,18 @@ void Renderer::render(int width, int height, const FrameState& frame) {
         draw_page(index, page_size(index), Matrix::identity().value.data());
       };
       glDisable(GL_DEPTH_TEST);
-      draw_fitted(frame.next_page);
       glEnable(GL_SCISSOR_TEST);
+      // Shade each page only where it is visible. Drawing the incoming page
+      // beneath the covered area wastes up to a full viewport of fragment work.
+      const bool positive = wipe.direction == 0 || wipe.direction == 90;
+      if (wipe.horizontal) {
+        const int revealed = width - wipe.outgoing.width;
+        glScissor(positive ? 0 : wipe.outgoing.width, 0, revealed, height);
+      } else {
+        const int revealed = height - wipe.outgoing.height;
+        glScissor(0, positive ? 0 : wipe.outgoing.height, width, revealed);
+      }
+      draw_fitted(frame.next_page);
       glScissor(wipe.outgoing.x, wipe.outgoing.y,
                 wipe.outgoing.width, wipe.outgoing.height);
       // The outgoing letterbox is part of its image too. Clear the unrevealed

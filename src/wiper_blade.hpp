@@ -40,23 +40,31 @@ inline void update_wiper_mesh(double progress, float half, int direction, WiperM
   };
   for (int material=0; material<3; ++material) {
     const int first = mesh.count;
-    const auto vertex = [&](const Matrix& model, Point position, Point normal) {
-      if (mesh.count >= static_cast<int>(mesh.vertices.size()))
-        throw std::length_error("wiper mesh exceeded fixed capacity");
+    const auto lighting = [&](const Matrix& model, Point normal) {
       const auto& m = model.value;
-      const float x=m[0]*position[0]+m[4]*position[1]+m[8]*position[2]+m[12];
-      const float y=m[1]*position[0]+m[5]*position[1]+m[9]*position[2]+m[13];
-      const float z=m[2]*position[0]+m[6]*position[1]+m[10]*position[2]+m[14];
       const float nx=m[0]*normal[0]+m[4]*normal[1]+m[8]*normal[2];
       const float ny=m[1]*normal[0]+m[5]*normal[1]+m[9]*normal[2];
       const float nz=m[2]*normal[0]+m[6]*normal[1]+m[10]*normal[2];
       const float world_x=cosine*nx-sine*ny, world_y=sine*nx+cosine*ny;
       const float diffuse=std::max(0.0F,-.42F*world_x+.36F*world_y+.83F*nz);
       const float highlight=.14F*std::pow(std::max(nz,0.0F),16);
-      mesh.vertices[mesh.count++]={x,y,z,.30F+.65F*diffuse+highlight};
+      return .30F+.65F*diffuse+highlight;
+    };
+    const auto position = [&](const Matrix& model, Point point, float light) {
+      if (mesh.count >= static_cast<int>(mesh.vertices.size()))
+        throw std::length_error("wiper mesh exceeded fixed capacity");
+      const auto& m = model.value;
+      const float x=m[0]*point[0]+m[4]*point[1]+m[8]*point[2]+m[12];
+      const float y=m[1]*point[0]+m[5]*point[1]+m[9]*point[2]+m[13];
+      const float z=m[2]*point[0]+m[6]*point[1]+m[10]*point[2]+m[14];
+      mesh.vertices[mesh.count++]={x,y,z,light};
+    };
+    const auto vertex = [&](const Matrix& model, Point point, Point normal) {
+      position(model,point,lighting(model,normal));
     };
     const auto quad = [&](const Matrix& model, std::array<Point,4> corners, Point normal) {
-      for (int index : {0,1,2,0,2,3}) vertex(model,corners[index],normal);
+      const float light=lighting(model,normal);
+      for (int index : {0,1,2,0,2,3}) position(model,corners[index],light);
     };
     const auto box = [&](int kind,const Matrix& model,float x,float y,float z) {
       if (kind != material) return;

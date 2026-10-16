@@ -7,7 +7,7 @@ import time
 
 
 class Frames:
-    def __init__(self, driver, root, slo=.45):
+    def __init__(self, driver, root, slo=.45, environment=None):
         self.started = time.perf_counter()
         self.slo = slo
         cache = os.environ.get("XDG_CACHE_HOME", str(Path(driver).resolve().parent/".pdfcube-test-cache"))
@@ -15,7 +15,8 @@ class Frames:
             [str(Path(driver).resolve())], text=True, stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             env=dict(os.environ, HOME=str(root), XDG_CACHE_HOME=cache,
-                     MESA_SHADER_CACHE_DIR=str(Path(cache)/"mesa"), LIBGL_ALWAYS_SOFTWARE="1"))
+                     MESA_SHADER_CACHE_DIR=str(Path(cache)/"mesa"), LIBGL_ALWAYS_SOFTWARE="1",
+                     **(environment or {})))
         assert self.process.stdout.readline().strip() == "READY", self.process.stderr.read()
 
     def render(self, *arguments):
