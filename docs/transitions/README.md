@@ -170,24 +170,30 @@ shallow side faces as well as the classic cube caps.
 ## Dissolve: experimental, awaiting visual approval
 
 Dissolve treats the outgoing page as a thin glass panel hit from behind at
-its center. Radial cracks and irregular circular cracks partition the panel
-into 64 physical pieces: small triangular impact chips and larger polygonal
-outer splinters. A polygon remains one rigid piece even when the GPU draws it
-as two triangles.
+its center. An irregular Voronoi partition divides the panel into 64
+interlocking polygonal pieces, slightly denser around the impact. Cracks do
+not follow spokes or concentric rings. Each polygon remains one rigid piece
+when the GPU draws its triangle fan.
 
-A fast fracture wave releases the pieces into a common outward impulse, with
-modest variation in direction and speed. Translation stays at constant screen
-speed throughout flight. Outer splinters leave first, followed by the central
-chips; pieces do not slow down to meet a shared exit time. Every piece is
+The impact cuts directly from the intact page to separated, tilted fragments;
+there is no slow crack-opening stage. The blow is strongest at the center,
+with a modest outward-speed taper and a stronger forward impulse toward the
+viewer. Each piece keeps its launch speed throughout flight. Perspective is
+compensated at the pivot to keep outward screen speed constant. Every piece is
 completely outside the viewport by 99%, without a late sweep, acceleration,
 shrink, or fade.
 
 Each piece keeps a fixed tumbling axis tangent to its flight direction and a
 constant individual angular velocity. Distinct angular speeds avoid a
 synchronized edge-on flash. Restrained two-sided lighting makes the rotation
-readable. Orthographic projection preserves constant screen speed while the
-3D rotation still foreshortens the splinters. There is no gravity or camera
-movement. Both faces retain the outgoing slide texture.
+readable. Perspective gives the forward-moving splinters depth without a
+late speed boost. There is no gravity or camera movement. Both faces retain
+the outgoing slide texture.
+
+Pass `--experimental` to give the pieces a very thin wafer volume with two
+textured faces and a pale rim, roughly two pixels thick at a 960-pixel page
+width. The default keeps zero-thickness surfaces. This flag does not change
+the launch timing or velocity, and `--experimental=false` disables it explicitly.
 
 The fracture and motion are closed-form functions of progress: there is no
 runtime randomness or accumulating physics state. All shard vertices are sent

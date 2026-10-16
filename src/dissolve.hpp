@@ -4,7 +4,6 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
-#include <initializer_list>
 #include <utility>
 #include <vector>
 
@@ -17,17 +16,19 @@ struct ShardVertex {
   float u;
   float v;
   float light{1};
+  float rim{0};
 };
 
 struct GlassShard {
   std::vector<ShardVertex> vertices;
-  float delay;
   float direction_x;
   float direction_y;
   float spin;
   float tilt_x;
   float tilt_y;
   float speed;
+  float impact_angle;
+  float forward_speed;
 };
 
 inline float shard_hash(std::uint32_t value) {
@@ -58,110 +59,134 @@ inline float shard_radius(const GlassShard& shard) {
 
 inline const std::vector<GlassShard>& glass_shards() {
   static const std::vector<GlassShard> shards = [] {
-    // Shared radial cracks and irregular concentric cracks form a spiderweb.
-    // Chips near the impact are small; outer splinters are larger and longer.
-    constexpr int spokes = 16;
-    constexpr std::array<float, 4> radii{.14F, .39F, .70F, 1};
-    constexpr float pi = 3.14159265358979323846F;
+    // A clipped Voronoi partition makes interlocking, irregular glass pieces.
+    // The impact determines their motion, not a visible pattern of spokes.
     using Point = std::array<float, 2>;
-    std::array<std::array<Point, spokes>, radii.size()> points{};
-    for (int spoke = 0; spoke < spokes; ++spoke) {
-      // Preserve corner rays so the intact mesh covers the whole square.
-      const float jitter = spoke % 4 == 0 ? 0 :
-          (shard_hash(spoke * 31U + 7U) - .5F) * .45F;
-      const float angle = pi / 4 + (spoke + jitter) * (2 * pi / spokes);
-      for (std::size_t ring = 0; ring < radii.size(); ++ring) {
-        const bool outer = ring + 1 == radii.size();
-        const float bend = outer ? 0 :
-            (shard_hash(static_cast<std::uint32_t>(ring) * 41U + spoke * 71U) - .5F) * .16F;
-        float x = std::cos(angle + bend), y = std::sin(angle + bend);
-        if (outer && spoke % 4 == 0) {
-          x = std::copysign(1.0F, x);
-          y = std::copysign(1.0F, y);
-        }
-        // Interior cracks form broken circles, not nested rectangular grids.
-        const float boundary = outer ? std::max(std::abs(x), std::abs(y)) : 1;
-        const float radius = radii[ring] + (ring + 1 == radii.size() ? 0 :
-            (shard_hash(static_cast<std::uint32_t>(ring) * 97U + spoke * 53U) - .5F) * .045F);
-        points[ring][spoke] = {radius * x / boundary, radius * y / boundary};
+    constexpr int columns = 8;
+    std::vector<Point> seeds;
+    for (int row = 0; row < columns; ++row) {
+      for (int column = 0; column < columns; ++column) {
+        const auto id = static_cast<std::uint32_t>(row * columns + column);
+        float x = -1 + (column + .5F + .9F * (shard_hash(id * 31U + 7U) - .5F)) / 4;
+        float y = -1 + (row + .5F + .9F * (shard_hash(id * 53U + 3U) - .5F)) / 4;
+        // Slightly denser fragments near the hit, without concentric seams.
+        const float density = .65F + .35F * std::max(std::abs(x), std::abs(y));
+        seeds.push_back({x * density, y * density});
       }
     }
     std::vector<GlassShard> result;
-    result.reserve(spokes * radii.size());
-    const auto add = [&](std::initializer_list<Point> polygon) {
-      const auto id = static_cast<std::uint32_t>(result.size());
-      const auto vertex = [](const Point& point) {
-        return ShardVertex{point[0], point[1], 0, (point[0] + 1) / 2,
-                           (1 - point[1]) / 2};
-      };
-      GlassShard shard{};
-      for (const auto& point : polygon) shard.vertices.push_back(vertex(point));
-      const auto center = shard_center(shard);
-      const float x = center[0], y = center[1];
-      const float distance = std::hypot(x, y);
-      // Modest scatter breaks up perfect spokes without losing the common
-      // impact direction or coherent angular momentum about a tangent axis.
-      const float scatter = (shard_hash(id * 29U + 5U) - .5F) * .16F;
-      const float direction_x = (x * std::cos(scatter) - y * std::sin(scatter)) / distance;
-      const float direction_y = (x * std::sin(scatter) + y * std::cos(scatter)) / distance;
-      // Fixed but distinct angular speeds avoid a synchronized edge-on flash.
-      const float tumble = 2.1F + .5F * (1 - std::min(distance, 1.0F)) +
-                           2.4F * shard_hash(id * 47U + 17U);
-      shard.delay = .022F * distance;
-      shard.direction_x = direction_x;
-      shard.direction_y = direction_y;
-      shard.spin = (shard_hash(id * 43U + 13U) - .5F) * 2.2F;
-      shard.tilt_x = direction_y * tumble;
-      shard.tilt_y = -direction_x * tumble;
-      result.push_back(std::move(shard));
-    };
-    for (int spoke = 0; spoke < spokes; ++spoke) {
-      const int next = (spoke + 1) % spokes;
-      add({{0, 0}, points[0][spoke], points[0][next]});
-      for (std::size_t ring = 1; ring < radii.size(); ++ring) {
-        const auto& a = points[ring - 1][spoke];
-        const auto& b = points[ring][spoke];
-        const auto& c = points[ring][next];
-        const auto& d = points[ring - 1][next];
-        add({a, b, c, d});
+    result.reserve(seeds.size());
+    std::vector<Point> shared_vertices;
+    for (std::size_t cell = 0; cell < seeds.size(); ++cell) {
+      std::vector<Point> polygon{{-1,-1}, {1,-1}, {1,1}, {-1,1}};
+      const auto& seed = seeds[cell];
+      for (std::size_t neighbor = 0; neighbor < seeds.size(); ++neighbor) {
+        if (neighbor == cell) continue;
+        const auto& other = seeds[neighbor];
+        const float nx = other[0] - seed[0], ny = other[1] - seed[1];
+        const float mx = (seed[0] + other[0]) / 2, my = (seed[1] + other[1]) / 2;
+        const auto side = [&](const Point& p) { return (p[0]-mx)*nx + (p[1]-my)*ny; };
+        std::vector<Point> clipped;
+        Point previous = polygon.back();
+        float previous_side = side(previous);
+        for (const auto& point : polygon) {
+          const float current_side = side(point);
+          if ((previous_side <= 0) != (current_side <= 0)) {
+            const float t = previous_side / (previous_side-current_side);
+            clipped.push_back({previous[0] + t*(point[0]-previous[0]),
+                               previous[1] + t*(point[1]-previous[1])});
+          }
+          if (current_side <= 0) clipped.push_back(point);
+          previous = point;
+          previous_side = current_side;
+        }
+        polygon = std::move(clipped);
+        // Each seed lies strictly inside the page and owns a nonempty cell.
+        if (polygon.empty()) break;
       }
+      GlassShard shard{};
+      for (Point point : polygon) {
+        // Adjacent cells share exactly the same corners, despite independent
+        // floating-point half-plane clipping.
+        bool found = false;
+        for (const auto& shared : shared_vertices) {
+          if (std::hypot(point[0]-shared[0],point[1]-shared[1]) < .00001F) {
+            point = shared;
+            found = true;
+            break;
+          }
+        }
+        if (!found) shared_vertices.push_back(point);
+        if (!shard.vertices.empty() &&
+            shard.vertices.back().x == point[0] && shard.vertices.back().y == point[1]) continue;
+        shard.vertices.push_back({point[0],point[1],0,(point[0]+1)/2,(1-point[1])/2});
+      }
+      if (shard.vertices.size() > 1 &&
+          shard.vertices.front().x == shard.vertices.back().x &&
+          shard.vertices.front().y == shard.vertices.back().y) shard.vertices.pop_back();
+      if (shard.vertices.size() < 3) continue;
+      const auto center = shard_center(shard);
+      const float x = center[0], y = center[1], distance = std::hypot(x,y);
+      const auto id = static_cast<std::uint32_t>(cell);
+      const float scatter = (shard_hash(id*29U+5U)-.5F)*.16F;
+      const float direction = std::atan2(y,x) + scatter;
+      const float tumble = 2.1F + .5F*(1-std::min(distance,1.0F)) +
+                           2.4F*shard_hash(id*47U+17U);
+      shard.direction_x = std::cos(direction);
+      shard.direction_y = std::sin(direction);
+      shard.spin = (shard_hash(id*43U+13U)-.5F)*2.2F;
+      shard.tilt_x = shard.direction_y*tumble;
+      shard.tilt_y = -shard.direction_x*tumble;
+      shard.impact_angle = .30F + .25F*shard_hash(id*37U+11U);
+      shard.forward_speed = .08F + .57F*std::pow(std::max(0.0F,1-distance),2.0F);
+      result.push_back(std::move(shard));
     }
-    // One blast speed, with modest fixed variation, sets a common impulse.
-    // Its lower bound clears even the last central chip by 99%; outer pieces
-    // depart naturally earlier instead of slowing to a common deadline.
+    // The impact is strongest at the center and tapers toward the border.
+    // Pick one minimum border speed that still clears every piece by 99%.
+    // The initial broken pose supplies separation, not a slow crack phase.
     float blast_speed = 0;
     for (const auto& shard : result) {
       const auto center = shard_center(shard);
-      const float edge = 1 + shard_radius(shard) + .015F;
+      // Also bound the enlarged silhouette as pieces fly toward the camera.
+      const float edge = 1 + 1.6F * shard_radius(shard) + .015F;
       const float exit_x = std::abs(shard.direction_x) > .001F ?
           (edge - std::copysign(1.0F, shard.direction_x) * center[0]) /
               std::abs(shard.direction_x) : 1000;
       const float exit_y = std::abs(shard.direction_y) > .001F ?
           (edge - std::copysign(1.0F, shard.direction_y) * center[1]) /
               std::abs(shard.direction_y) : 1000;
-      blast_speed = std::max(blast_speed, std::min(exit_x, exit_y) / (.99F - shard.delay));
+      const float distance = std::hypot(center[0], center[1]);
+      const float central_impulse = .35F * std::pow(std::max(0.0F, 1 - distance), 2.0F);
+      blast_speed = std::max(blast_speed,
+          (std::min(exit_x, exit_y) - .12F * distance) / .99F - central_impulse);
     }
-    for (std::size_t i = 0; i < result.size(); ++i)
-      result[i].speed = blast_speed * (1 + .18F * shard_hash(static_cast<std::uint32_t>(i) * 61U));
+    for (auto& shard : result) {
+      const auto center = shard_center(shard);
+      const float distance = std::hypot(center[0], center[1]);
+      shard.speed = blast_speed + .35F * std::pow(std::max(0.0F, 1 - distance), 2.0F);
+    }
     return result;
   }();
   return shards;
 }
 
-inline std::size_t glass_shard_vertex_count() {
+inline std::size_t glass_shard_vertex_count(bool experimental = false) {
   std::size_t count = 0;
-  for (const auto& shard : glass_shards()) count += 3 * (shard.vertices.size() - 2);
+  for (const auto& shard : glass_shards()) {
+    const auto faces = 3 * (shard.vertices.size() - 2);
+    count += experimental ? 2 * faces + 6 * shard.vertices.size() : faces;
+  }
   return count;
 }
 
-inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex>& result) {
+inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex>& result,
+                                       bool experimental = false) {
   const float position = std::clamp(static_cast<float>(progress), 0.0F, 1.0F);
   result.clear();
   const auto& shards = glass_shards();
-  result.reserve(glass_shard_vertex_count());
+  result.reserve(glass_shard_vertex_count(experimental));
   for (const GlassShard& shard : shards) {
     const auto center = shard_center(shard);
-    const float age = std::max(0.0F, position - shard.delay);
     // The impact supplies a fixed angular momentum about an axis tangent to
     // the radial flight direction. Rotate rigidly about that axis throughout
     // flight, independently of translation.
@@ -170,34 +195,68 @@ inline void update_glass_shard_vertices(double progress, std::vector<ShardVertex
     const float axis_x = shard.tilt_x / angular_speed;
     const float axis_y = shard.tilt_y / angular_speed;
     const float axis_z = shard.spin / angular_speed;
-    const float angle = angular_speed * age;
+    // The impact is a cut from the intact panel to separated, tilted pieces.
+    // After that first broken pose, both translation and rotation are linear.
+    const float angle = position == 0 ? 0 : shard.impact_angle + angular_speed * position;
     const float cosine = std::cos(angle);
     const float sine = std::sin(angle);
     // Both faces catch light while tumbling. The unbroken page stays neutral.
     const float normal_z = cosine + axis_z * axis_z * (1 - cosine);
     const float light = .58F + .42F * std::abs(normal_z) +
                         .10F * std::pow(std::sin(2 * angle), 8.0F);
-    const float travel = shard.speed * age;
-    const auto transform = [&](const ShardVertex& source) {
-      const float local_x = source.x - center[0];
-      const float local_y = source.y - center[1];
-      const float dot = axis_x * local_x + axis_y * local_y;
-      const float turned_x = local_x * cosine - axis_z * local_y * sine +
+    const float impact = position == 0 ? 0 : .12F * std::hypot(center[0], center[1]);
+    const float travel = impact + shard.speed * position;
+    const float depth = shard.forward_speed * position;
+    // The central blow sends glass toward the viewer. Compensate the pivot's
+    // perspective magnification so its visible outward velocity stays fixed;
+    // the rigid splinter itself still grows naturally as it approaches.
+    const float inverse_projection = 1 - depth / 4;
+    const auto rotate = [&](float local_x, float local_y, float local_z) {
+      const float dot = axis_x * local_x + axis_y * local_y + axis_z * local_z;
+      const float turned_x = local_x * cosine + (axis_y * local_z - axis_z * local_y) * sine +
                              axis_x * dot * (1 - cosine);
-      const float turned_y = local_y * cosine + axis_z * local_x * sine +
+      const float turned_y = local_y * cosine + (axis_z * local_x - axis_x * local_z) * sine +
                              axis_y * dot * (1 - cosine);
-      const float turned_z = (axis_x * local_y - axis_y * local_x) * sine +
+      const float turned_z = local_z * cosine + (axis_x * local_y - axis_y * local_x) * sine +
                              axis_z * dot * (1 - cosine);
-      result.push_back({
-          center[0] + turned_x + shard.direction_x * travel,
-          center[1] + turned_y + shard.direction_y * travel,
-          turned_z, source.u, source.v, light});
+      return std::array<float, 3>{turned_x, turned_y, turned_z};
     };
+    const auto transform = [&](const ShardVertex& source, float local_z,
+                               float lighting, float rim) {
+      const auto turned = rotate(source.x - center[0], source.y - center[1], local_z);
+      result.push_back({
+          (center[0] + shard.direction_x * travel) * inverse_projection + turned[0],
+          (center[1] + shard.direction_y * travel) * inverse_projection + turned[1],
+          depth + turned[2], source.u, source.v, lighting, rim});
+    };
+    constexpr float half_thickness = .002F;
+    const float front = experimental ? half_thickness : 0;
     // A polygon is one rigid splinter, even when rasterized as two triangles.
     for (std::size_t i = 1; i + 1 < shard.vertices.size(); ++i) {
-      transform(shard.vertices[0]);
-      transform(shard.vertices[i]);
-      transform(shard.vertices[i + 1]);
+      transform(shard.vertices[0], front, light, 0);
+      transform(shard.vertices[i], front, light, 0);
+      transform(shard.vertices[i + 1], front, light, 0);
+    }
+    if (!experimental) continue;
+    for (std::size_t i = 1; i + 1 < shard.vertices.size(); ++i) {
+      transform(shard.vertices[0], -front, light, 0);
+      transform(shard.vertices[i + 1], -front, light, 0);
+      transform(shard.vertices[i], -front, light, 0);
+    }
+    // Close the wafer with a tiny pale rim. Texture coordinates stay on the
+    // original edge; a separate material keeps the rim from stretching text.
+    for (std::size_t i = 0; i < shard.vertices.size(); ++i) {
+      const auto& a = shard.vertices[i];
+      const auto& b = shard.vertices[(i + 1) % shard.vertices.size()];
+      const float length = std::hypot(b.x - a.x, b.y - a.y);
+      const auto normal = rotate((b.y - a.y) / length, -(b.x - a.x) / length, 0);
+      const float rim_light = .65F + .35F * std::abs(normal[2]);
+      transform(a, front, rim_light, 1);
+      transform(a, -front, rim_light, 1);
+      transform(b, -front, rim_light, 1);
+      transform(a, front, rim_light, 1);
+      transform(b, -front, rim_light, 1);
+      transform(b, front, rim_light, 1);
     }
   }
 }

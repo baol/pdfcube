@@ -63,6 +63,8 @@ ParseResult parse_options(int argc, char** argv) {
        "Cube cap and Push side color as r:g:b, with values between 0.0 and 1.0.")
       ("demo", po::value<bool>()->implicit_value(true),
        "Auto-advance using PDF or programmed durations.")
+      ("experimental", po::value<bool>()->implicit_value(true),
+       "Enable experimental animation details, including thin glass shard edges.")
       ("program", po::value<std::string>(),
        "Transition program duration:type pairs (c, p, blinds, split, cover, uncover, fly, push, dissolve), for example 5:c:3:p.")
       ("performance-log", po::value<std::string>(),
@@ -125,6 +127,9 @@ ParseResult parse_options(int argc, char** argv) {
       result.options.fullscreen = !selected->as<bool>();
     }
     if (const auto* selected = value("demo")) result.options.demo = selected->as<bool>();
+    if (const auto* selected = value("experimental")) {
+      result.options.experimental = selected->as<bool>();
+    }
     if (const auto* selected = value("program")) result.options.program = selected->as<std::string>();
     if (const auto* selected = value("performance-log")) {
       result.options.performance_log = selected->as<std::string>();

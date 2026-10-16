@@ -45,7 +45,7 @@ struct FrameState {
 
 class Renderer {
  public:
-  Renderer(Document& document, Color background, Color top);
+  Renderer(Document& document, Color background, Color top, bool experimental = false);
   ~Renderer();
 
   Renderer(const Renderer&) = delete;
@@ -88,6 +88,7 @@ class Renderer {
   Document& document_;
   Color background_;
   Color top_;
+  bool experimental_{false};
   GLuint program_{0};
   GLuint vao_{0};
   GLuint vbo_{0};

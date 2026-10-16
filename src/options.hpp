@@ -16,6 +16,7 @@ struct Options {
   Color background{0.6F, 0.0F, 0.0F, 1.0F};
   Color top{0.7F, 0.6F, 0.6F, 1.0F};
   bool demo{false};
+  bool experimental{false};
   bool fullscreen{true};
   std::string program;
   std::string performance_log;

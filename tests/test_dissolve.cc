@@ -11,7 +11,7 @@ using Frame = std::vector<Vertex>;
 int main() {
   const auto& shards = pdfcube::glass_shards();
   assert(shards.size() == 64);
-  assert(pdfcube::glass_shard_vertex_count() == 336);
+  assert(pdfcube::glass_shard_vertex_count() > 3*shards.size());
   using Point = std::pair<float, float>;
   std::map<std::pair<Point, Point>, int> edges;
   double area = 0;
@@ -21,8 +21,8 @@ int main() {
   for (const auto& shard : shards) {
     offsets.push_back(offset);
     offset += 3 * (shard.vertices.size() - 2);
-    assert(shard.vertices.size() == 3 || shard.vertices.size() == 4);
-    assert(shard.delay >= 0 && shard.delay < .04F);
+    assert(shard.vertices.size() >= 3);
+    assert(shard.impact_angle >= .30F && shard.impact_angle <= .55F);
     assert(std::abs(std::hypot(shard.direction_x, shard.direction_y) - 1) < .00001F);
     assert(std::abs(shard.tilt_x * shard.direction_x +
                     shard.tilt_y * shard.direction_y) < .00001F);
@@ -53,8 +53,21 @@ int main() {
   // The fracture partitions the panel, with no internal cracks or overlap at
   // rest. Large outer splinters and small impact chips have distinct scales.
   assert(std::abs(area - 4) < .00001);
-  assert(largest > 15 * smallest);
-  assert(slowest > 0 && fastest <= 1.181F * slowest);
+  assert(largest > 2 * smallest);
+  assert(slowest > 0 && fastest > slowest);
+  // The impulse weakens with distance from the hit, rather than speeding up
+  // the border pieces or making all pieces reach the edge simultaneously.
+  for (const auto& a : shards) {
+    const auto ca = pdfcube::shard_center(a);
+    const float ra = std::hypot(ca[0],ca[1]);
+    for (const auto& b : shards) {
+      const auto cb = pdfcube::shard_center(b);
+      if (ra < std::hypot(cb[0],cb[1])) {
+        assert(a.speed >= b.speed);
+        assert(a.forward_speed >= b.forward_speed);
+      }
+    }
+  }
   for (const auto& [edge, count] : edges) {
     assert(count == 1 || count == 2);
     if (count == 1) {
@@ -66,11 +79,12 @@ int main() {
     }
   }
 
-  // Recover the unique corners from the GPU triangle fan. The duplicate
-  // corners of a quad must never give it two independent rotations.
+  // Recover each polygon's unique corners from the GPU triangle fan.
+  // Internal triangles must never give one piece independent rotations.
   const auto corners = [&](const Frame& frame, std::size_t i) {
     Frame result{frame[offsets[i]], frame[offsets[i]+1], frame[offsets[i]+2]};
-    if (shards[i].vertices.size() == 4) result.push_back(frame[offsets[i]+5]);
+    for (std::size_t j = 3; j < shards[i].vertices.size(); ++j)
+      result.push_back(frame[offsets[i]+3*(j-2)+2]);
     return result;
   };
   const auto center = [](const Frame& vertices) {
@@ -84,6 +98,13 @@ int main() {
   };
   const auto distance = [](const Vertex& a, const Vertex& b) {
     return std::sqrt((a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z));
+  };
+  const auto screen_center = [&](const Frame& vertices) {
+    auto c = center(vertices);
+    const float projection = 4 / (4 - c[2]);
+    c[0] *= projection;
+    c[1] *= projection;
+    return c;
   };
   const auto normal = [](const Frame& vertices) {
     const auto& a = vertices[0];
@@ -110,6 +131,18 @@ int main() {
     }
   }
   Frame third;
+  // The very first moving frame must already show an impact, not a nearly
+  // intact panel waiting for cosine foreshortening to open cracks.
+  Frame impact;
+  pdfcube::update_glass_shard_vertices(.000001, impact);
+  for (std::size_t i = 0; i < shards.size(); ++i) {
+    const auto p = screen_center(corners(impact,i));
+    const auto c = screen_center(corners(intact,i));
+    const auto n = normal(corners(impact,i));
+    assert(std::hypot(p[0]-c[0],p[1]-c[1]) >
+           .119F * std::hypot(c[0],c[1]));
+    assert(n[2] < .97F);
+  }
   pdfcube::update_glass_shard_vertices(.30, third);
   for (std::size_t i = 0; i < shards.size(); ++i) {
     const auto a = normal(corners(early,i));
@@ -126,7 +159,7 @@ int main() {
   }
 
   previous = early;
-  int visible_25 = 0, visible_75 = 0;
+  int visible_25 = 0, visible_50 = 0;
   for (int step = 11; step <= 100; ++step) {
     Frame current, repeated;
     pdfcube::update_glass_shard_vertices(step / 100.0, current);
@@ -134,13 +167,14 @@ int main() {
     int visible = 0;
     for (std::size_t i = 0; i < shards.size(); ++i) {
       const auto unique = corners(current,i);
-      const auto c = center(unique), p = center(corners(previous,i));
-      const auto e = center(corners(early,i)), l = center(corners(later,i));
+      const auto c = screen_center(unique), p = screen_center(corners(previous,i));
+      const auto e = screen_center(corners(early,i)), l = screen_center(corners(later,i));
       // Equal progress intervals mean equal screen displacement for the
       // whole flight, including the final approach to the viewport edge.
       assert(std::abs((c[0]-p[0]) - (l[0]-e[0])/10) < .00001F);
       assert(std::abs((c[1]-p[1]) - (l[1]-e[1])/10) < .00001F);
-      assert(std::abs(c[2]) < .00001F);
+      assert(std::abs((c[2]-p[2]) - (l[2]-e[2])/10) < .00001F);
+      assert(c[2] > p[2]);
       assert((c[0]-p[0])*shards[i].direction_x + (c[1]-p[1])*shards[i].direction_y > 0);
       // All pairwise distances, including both polygon diagonals, are rigid.
       for (std::size_t a = 0; a < unique.size(); ++a)
@@ -150,15 +184,16 @@ int main() {
       float min_x=100, min_y=100, max_x=-100, max_y=-100;
       for (const auto& vertex : unique) {
         assert(vertex.light >= .58F && vertex.light <= 1.1F);
-        min_x=std::min(min_x,vertex.x); max_x=std::max(max_x,vertex.x);
-        min_y=std::min(min_y,vertex.y); max_y=std::max(max_y,vertex.y);
+        const float projection = 4 / (4 - vertex.z);
+        min_x=std::min(min_x,vertex.x*projection); max_x=std::max(max_x,vertex.x*projection);
+        min_y=std::min(min_y,vertex.y*projection); max_y=std::max(max_y,vertex.y*projection);
       }
       const bool outside = max_x < -1 || min_x > 1 || max_y < -1 || min_y > 1;
       if (!outside) ++visible;
       if (step >= 99) assert(outside);
-      if (unique.size() == 4) {
-        assert(distance(current[offsets[i]],current[offsets[i]+3]) == 0);
-        assert(distance(current[offsets[i]+2],current[offsets[i]+4]) == 0);
+      for (std::size_t j = 1; j + 2 < unique.size(); ++j) {
+        assert(distance(current[offsets[i]],current[offsets[i]+3*j]) == 0);
+        assert(distance(current[offsets[i]+3*j-1],current[offsets[i]+3*j+1]) == 0);
       }
     }
     for (std::size_t i = 0; i < current.size(); ++i) {
@@ -167,9 +202,41 @@ int main() {
       assert(current[i].light == repeated[i].light);
     }
     if (step == 25) visible_25 = visible;
-    if (step == 75) visible_75 = visible;
+    if (step == 50) visible_50 = visible;
     previous = std::move(current);
   }
-  // Pieces leave at different times; a small tail remains to tumble late.
-  assert(visible_25 > visible_75 && visible_75 > 0);
+  // Pieces leave at different times, rather than clearing in one final sweep.
+  assert(visible_25 > visible_50 && visible_50 > 0);
+
+  // Optional wafer geometry has two textured faces joined by a pale rim.
+  // The front/back separation remains fixed while each whole piece tumbles.
+  assert(pdfcube::glass_shard_vertex_count(true) > 2*pdfcube::glass_shard_vertex_count());
+  for (double progress : {.01, .25, .50, .99, 1.0}) {
+    Frame thick;
+    pdfcube::update_glass_shard_vertices(progress, thick, true);
+    assert(thick.size() == pdfcube::glass_shard_vertex_count(true));
+    std::size_t base = 0;
+    for (const auto& shard : shards) {
+      const auto faces = 3 * (shard.vertices.size()-2);
+      for (std::size_t i = 0; i < faces; i += 3) {
+        for (std::size_t j = 0; j < 3; ++j) {
+          const std::size_t back = base + faces + i + (j == 0 ? 0 : 3-j);
+          assert(std::abs(distance(thick[base+i+j],thick[back]) - .004F) < .000001F);
+          assert(thick[base+i+j].rim == 0 && thick[back].rim == 0);
+        }
+      }
+      const auto end = base + 2*faces + 6*shard.vertices.size();
+      for (std::size_t i = base+2*faces; i < end; ++i) assert(thick[i].rim == 1);
+      if (progress >= .99) {
+        float lx=100,ly=100,hx=-100,hy=-100;
+        for (std::size_t i = base; i < end; ++i) {
+          const float projection = 4/(4-thick[i].z);
+          lx=std::min(lx,thick[i].x*projection); hx=std::max(hx,thick[i].x*projection);
+          ly=std::min(ly,thick[i].y*projection); hy=std::max(hy,thick[i].y*projection);
+        }
+        assert(hx < -1 || lx > 1 || hy < -1 || ly > 1);
+      }
+      base = end;
+    }
+  }
 }
