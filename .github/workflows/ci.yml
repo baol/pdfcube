@@ -29,6 +29,9 @@ jobs:
         run: meson compile -C build
       - name: Test
         run: meson test -C build --print-errorlogs
+      - name: Report test timing SLO
+        if: always() && hashFiles('build/meson-logs/testlog.json') != ''
+        run: python3 tools/check_test_slo.py build/meson-logs/testlog.json
       - name: Build documentation
         run: meson compile -C build doc
       - uses: actions/upload-artifact@v4

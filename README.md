@@ -45,8 +45,9 @@ sudo apt install python3 python3-pil dbus-daemon libegl-dev libgl1-mesa-dri font
 ```
 
 Frame tests render explicit progress values in one headless context per case;
-they do not wait through animation durations. Ordinary tests have a 500 ms
-budget, with a 1-second allowance for cold graphics setup. See
+they do not wait through animation durations. Every test has a 500 ms
+timing SLO, checked before pushing, including cold graphics setup. Timing misses are
+reported separately from functional failures. See
 [the test contract](tests/README.md). The optional review gallery additionally
 requires Xvfb, Xauth, and ffmpeg.
 
